@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>BashClaw</title>
+<link rel="stylesheet" href="/ui/style.css">
+</head>
+<body>
+<div id="app">
+
+  <nav id="nav">
+    <div class="nav-brand">
+      <span class="nav-logo">&gt;_</span>
+      <span class="nav-title">BashClaw</span>
+      <span class="nav-version" id="nav-version"></span>
+    </div>
+    <div class="nav-tabs">
+      <button class="nav-tab active" data-tab="chat">Chat</button>
+      <button class="nav-tab" data-tab="settings">Settings</button>
+      <button class="nav-tab" data-tab="status">Status</button>
+    </div>
+    <button class="nav-theme" id="theme-toggle" title="Toggle theme">
+      <span id="theme-icon">&#9789;</span>
+    </button>
+  </nav>
+
+  <!-- Chat Panel -->
+  <main id="panel-chat" class="panel active">
+    <div id="chat-messages" class="chat-messages"></div>
+    <div class="chat-input-area">
+      <div class="chat-input-row">
+        <textarea id="chat-input" placeholder="Type a message..." rows="1" autocomplete="off"></textarea>
+        <button id="chat-send" class="btn btn-primary" disabled>Send</button>
+      </div>
+      <div class="chat-controls">
+        <button id="chat-clear" class="btn btn-sm">Clear session</button>
+        <span class="chat-status" id="chat-status"></span>
+      </div>
+    </div>
+  </main>
+
+  <!-- Settings Panel -->
+  <main id="panel-settings" class="panel">
+    <div class="settings-container">
+
+      <section class="settings-section">
+        <h2>API Keys</h2>
+        <p class="settings-desc">Configure provider API keys. Keys are stored in <code>~/.bashclaw/.env</code> and never sent to the frontend.</p>
+        <div id="env-list" class="env-list"></div>
+      </section>
+
+      <section class="settings-section">
+        <h2>Model</h2>
+        <p class="settings-desc">Select the default model for the main agent.</p>
+        <div class="form-group">
+          <label for="model-select">Active Model</label>
+          <select id="model-select" class="form-control"></select>
+        </div>
+        <div id="model-info" class="model-info"></div>
+      </section>
+
+      <section class="settings-section">
+        <h2>Channels</h2>
+        <p class="settings-desc">Installed communication channels.</p>
+        <div id="channels-list" class="channels-list"></div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Status Panel -->
+  <main id="panel-status" class="panel">
+    <div class="status-container">
+
+      <section class="status-section">
+        <h2>System</h2>
+        <div id="status-system" class="status-grid"></div>
+      </section>
+
+      <section class="status-section">
+        <h2>Sessions</h2>
+        <div id="status-sessions" class="sessions-list"></div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- First-run overlay -->
+  <div id="onboard-overlay" class="overlay hidden">
+    <div class="overlay-card">
+      <h1>&gt;_ BashClaw</h1>
+      <p>Welcome. To get started, configure at least one AI provider API key.</p>
+      <div id="onboard-keys" class="env-list"></div>
+      <div class="overlay-actions">
+        <button id="onboard-skip" class="btn">Skip for now</button>
+        <button id="onboard-save" class="btn btn-primary">Save &amp; Start</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="/ui/app.js"></script>
+</body>
+</html>

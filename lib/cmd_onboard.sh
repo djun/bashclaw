@@ -43,8 +43,8 @@ cmd_onboard() {
   printf '\n'
 
   printf 'Setup complete!\n'
-  printf 'Run "bashclaw gateway" to start the server.\n'
-  printf 'Run "bashclaw agent -i" for interactive mode.\n'
+  printf 'Run "bashclaw gateway" to start the server and open http://localhost:18789\n'
+  printf 'Run "bashclaw agent -i" for interactive CLI mode.\n'
   printf 'Run "bashclaw daemon status" to check the service.\n'
 }
 

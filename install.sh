@@ -36,13 +36,13 @@ _fatal() {
 
 _banner() {
   cat <<'BANNER'
-  _               _          _
- | |__   __ _ ___| |__   ___| | __ ___      __
- | '_ \ / _` / __| '_ \ / __| |/ _` \ \ /\ / /
- | |_) | (_| \__ \ | | | (__| | (_| |\ V  V /
- |_.__/ \__,_|___/_| |_|\___|_|\__,_| \_/\_/
+ ____            _       ____ _
+| __ )  __ _ ___| |__   / ___| | __ ___      __
+|  _ \ / _` / __| '_ \ | |   | |/ _` \ \ /\ / /
+| |_) | (_| \__ \ | | | | |___| | (_| |\ V  V /
+|____/ \__,_|___/_| |_| \____|_|\__,_| \_/\_/
 
- Bash-native AI agent framework
+ Bash is all you need.
 BANNER
   _print ""
 }
@@ -66,7 +66,7 @@ _detect_distro() {
     local id
     id="$(. /etc/os-release && printf '%s' "${ID:-}")"
     printf '%s' "$id"
-  elif is_command_available lsb_release; then
+  elif _is_command_available lsb_release; then
     lsb_release -si 2>/dev/null | tr '[:upper:]' '[:lower:]'
   else
     printf 'unknown'
@@ -293,6 +293,8 @@ _create_default_config() {
   mkdir -p "$state_dir/memory"
   mkdir -p "$state_dir/cron"
   mkdir -p "$state_dir/hooks"
+  mkdir -p "$state_dir/extensions"
+  mkdir -p "$state_dir/agents"
 
   local config_file="${state_dir}/bashclaw.json"
   if [[ -f "$config_file" ]]; then
@@ -337,13 +339,13 @@ _uninstall() {
     _info "Removed: $install_dir"
   fi
 
-  # Remove PATH entries from shell configs
+  # Remove PATH entries from shell configs (only remove the bashclaw PATH block)
   local rc
   for rc in "$HOME/.bashrc" "$HOME/.bash_profile" "$HOME/.zshrc" "$HOME/.profile"; do
-    if [[ -f "$rc" ]] && grep -qF "bashclaw" "$rc" 2>/dev/null; then
+    if [[ -f "$rc" ]] && grep -qF "# bashclaw" "$rc" 2>/dev/null; then
       local tmp
       tmp="$(mktemp)"
-      grep -vF "bashclaw" "$rc" > "$tmp"
+      awk '/^# bashclaw$/{skip=1; next} skip && /^export PATH=.*bashclaw/{skip=0; next} skip{skip=0; print; next} {print}' "$rc" > "$tmp"
       mv "$tmp" "$rc"
       _info "Cleaned PATH from $rc"
     fi

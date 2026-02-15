@@ -22,6 +22,8 @@ if ! declare -f log_info &>/dev/null; then
   fi
 fi
 
+BASHCLAW_UI_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/ui"
+
 # ---- HTTP Request Parser ----
 
 _http_read_request() {
@@ -34,9 +36,16 @@ _http_read_request() {
   HTTP_VERSION=""
   HTTP_BODY=""
   HTTP_CONTENT_LENGTH=0
+  HTTP_QUERY=""
 
   # Parse request line
   IFS=' ' read -r HTTP_METHOD HTTP_PATH HTTP_VERSION <<< "$line"
+
+  # Split path and query string
+  if [[ "$HTTP_PATH" == *"?"* ]]; then
+    HTTP_QUERY="${HTTP_PATH#*\?}"
+    HTTP_PATH="${HTTP_PATH%%\?*}"
+  fi
 
   # Read headers
   while IFS= read -r line; do
@@ -67,6 +76,7 @@ _http_respond() {
   local status_text
   case "$status" in
     200) status_text="OK" ;;
+    304) status_text="Not Modified" ;;
     400) status_text="Bad Request" ;;
     401) status_text="Unauthorized" ;;
     404) status_text="Not Found" ;;
@@ -82,7 +92,7 @@ _http_respond() {
   printf 'Content-Length: %d\r\n' "$body_length"
   printf 'Connection: close\r\n'
   printf 'Access-Control-Allow-Origin: *\r\n'
-  printf 'Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n'
+  printf 'Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS\r\n'
   printf 'Access-Control-Allow-Headers: Content-Type, Authorization\r\n'
   printf '\r\n'
   printf '%s' "$body"
@@ -92,6 +102,31 @@ _http_respond_json() {
   local status="$1"
   local json="$2"
   _http_respond "$status" "application/json" "$json"
+}
+
+# Serve a static file with proper MIME type
+_http_serve_file() {
+  local file_path="$1"
+
+  if [[ ! -f "$file_path" ]]; then
+    _http_respond_json 404 '{"error":"file not found"}'
+    return
+  fi
+
+  local mime_type="application/octet-stream"
+  case "$file_path" in
+    *.html) mime_type="text/html; charset=utf-8" ;;
+    *.css)  mime_type="text/css; charset=utf-8" ;;
+    *.js)   mime_type="application/javascript; charset=utf-8" ;;
+    *.json) mime_type="application/json; charset=utf-8" ;;
+    *.svg)  mime_type="image/svg+xml" ;;
+    *.png)  mime_type="image/png" ;;
+    *.ico)  mime_type="image/x-icon" ;;
+  esac
+
+  local body
+  body="$(cat "$file_path")"
+  _http_respond 200 "$mime_type" "$body"
 }
 
 # ---- Auth Check ----
@@ -124,7 +159,28 @@ handle_request() {
 
   log_debug "HTTP request: $HTTP_METHOD $HTTP_PATH"
 
+  # Static file serving for /ui paths
+  case "$HTTP_PATH" in
+    /ui|/ui/)
+      _http_serve_file "${BASHCLAW_UI_DIR}/index.html"
+      return
+      ;;
+    /ui/*)
+      # Path traversal protection
+      local rel_path="${HTTP_PATH#/ui/}"
+      case "$rel_path" in
+        *..*)
+          _http_respond_json 400 '{"error":"path traversal not allowed"}'
+          return
+          ;;
+      esac
+      _http_serve_file "${BASHCLAW_UI_DIR}/${rel_path}"
+      return
+      ;;
+  esac
+
   case "$HTTP_METHOD:$HTTP_PATH" in
+    # Legacy routes (backward compatible)
     GET:/status|GET:/health|GET:/healthz)
       _handle_status
       ;;
@@ -137,16 +193,63 @@ handle_request() {
     POST:/message/send)
       _handle_message_send
       ;;
-    GET:/)
-      _http_respond_json 200 '{"name":"bashclaw","status":"running"}'
+
+    # REST API: status
+    GET:/api/status)
+      _handle_status
       ;;
+
+    # REST API: config
+    GET:/api/config)
+      _handle_api_config_get
+      ;;
+    PUT:/api/config)
+      _handle_api_config_set
+      ;;
+
+    # REST API: models
+    GET:/api/models)
+      _handle_api_models
+      ;;
+
+    # REST API: sessions
+    GET:/api/sessions)
+      _handle_api_sessions_list
+      ;;
+    POST:/api/sessions/clear)
+      _handle_session_clear
+      ;;
+
+    # REST API: chat
+    POST:/api/chat)
+      _handle_chat
+      ;;
+
+    # REST API: channels
+    GET:/api/channels)
+      _handle_api_channels
+      ;;
+
+    # REST API: env (API keys management)
+    GET:/api/env)
+      _handle_api_env_get
+      ;;
+    PUT:/api/env)
+      _handle_api_env_set
+      ;;
+
+    # Root redirects to UI
+    GET:/)
+      _http_serve_file "${BASHCLAW_UI_DIR}/index.html"
+      ;;
+
     *)
       _http_respond_json 404 '{"error":"not found"}'
       ;;
   esac
 }
 
-# ---- Route Implementations ----
+# ---- Legacy Route Implementations ----
 
 _handle_status() {
   require_command jq "status handler requires jq"
@@ -165,12 +268,24 @@ _handle_status() {
     session_count="$(find "${BASHCLAW_STATE_DIR}/sessions" -name '*.jsonl' 2>/dev/null | wc -l | tr -d ' ')"
   fi
 
+  local model
+  model="$(agent_resolve_model "main" 2>/dev/null)" || model="unknown"
+  local provider
+  provider="$(agent_resolve_provider "$model" 2>/dev/null)" || provider="unknown"
+
+  local channels_configured="[]"
+  channels_configured="$(config_get_raw '.channels | keys // []' 2>/dev/null)" || channels_configured="[]"
+
   local response
   response="$(jq -nc \
     --arg status "ok" \
+    --arg version "${BASHCLAW_VERSION:-1.0.0}" \
+    --arg model "$model" \
+    --arg provider "$provider" \
     --argjson sessions "$session_count" \
     --argjson gateway "$uptime_info" \
-    '{status: $status, sessions: $sessions, gateway: $gateway}')"
+    --argjson channels "$channels_configured" \
+    '{status: $status, version: $version, model: $model, provider: $provider, sessions: $sessions, gateway: $gateway, channels: $channels}')"
 
   _http_respond_json 200 "$response"
 }
@@ -293,6 +408,285 @@ _handle_message_send() {
     _http_respond_json 400 "$(jq -nc --arg ch "$ch" \
       '{error: "unknown channel", channel: $ch}')"
   fi
+}
+
+# ---- REST API: Config ----
+
+_handle_api_config_get() {
+  require_command jq "config API requires jq"
+
+  _config_ensure_loaded
+
+  # Return config with sensitive fields masked
+  local safe_config
+  safe_config="$(printf '%s' "$_CONFIG_CACHE" | jq '
+    walk(
+      if type == "string" and (
+        test("^(sk-|key-|token-)"; "i") or
+        test("^[A-Za-z0-9]{20,}$")
+      ) then "***"
+      else .
+      end
+    )
+  ' 2>/dev/null)" || safe_config="$_CONFIG_CACHE"
+
+  _http_respond_json 200 "$safe_config"
+}
+
+_handle_api_config_set() {
+  require_command jq "config API requires jq"
+
+  if [[ -z "$HTTP_BODY" ]]; then
+    _http_respond_json 400 '{"error":"request body required"}'
+    return
+  fi
+
+  # Validate JSON
+  if ! printf '%s' "$HTTP_BODY" | jq empty 2>/dev/null; then
+    _http_respond_json 400 '{"error":"invalid JSON"}'
+    return
+  fi
+
+  # Merge partial updates into existing config
+  _config_ensure_loaded
+  local merged
+  merged="$(printf '%s\n%s' "$_CONFIG_CACHE" "$HTTP_BODY" | jq -s '.[0] * .[1]' 2>/dev/null)"
+
+  if [[ -z "$merged" ]]; then
+    _http_respond_json 500 '{"error":"config merge failed"}'
+    return
+  fi
+
+  # Backup before write
+  config_backup
+
+  local path
+  path="$(_config_resolve_path)"
+  ensure_dir "$(dirname "$path")"
+  printf '%s\n' "$merged" > "$path"
+  chmod 600 "$path" 2>/dev/null || true
+
+  # Reload cache
+  _CONFIG_CACHE=""
+  config_load
+
+  _http_respond_json 200 '{"updated": true}'
+}
+
+# ---- REST API: Models ----
+
+_handle_api_models() {
+  require_command jq "models API requires jq"
+
+  local catalog
+  catalog="$(_models_catalog_load)"
+
+  # Return models with provider info and aliases
+  local response
+  response="$(printf '%s' "$catalog" | jq '{
+    models: [.models | to_entries[] | {
+      id: .key,
+      provider: .value.provider,
+      max_tokens: .value.max_tokens,
+      context_window: .value.context_window,
+      supports_images: .value.supports_images,
+      supports_thinking: .value.supports_thinking
+    }],
+    aliases: .aliases,
+    providers: [.providers | to_entries[] | {
+      id: .key,
+      api_format: .value.api_format,
+      api_key_env: .value.api_key_env,
+      has_key: false
+    }]
+  }' 2>/dev/null)"
+
+  # Check which providers have API keys configured
+  local providers_with_keys="[]"
+  local p_list
+  p_list="$(printf '%s' "$catalog" | jq -r '.providers | to_entries[] | "\(.key)|\(.value.api_key_env // "")"' 2>/dev/null)"
+  while IFS='|' read -r p_id p_env; do
+    [[ -z "$p_id" ]] && continue
+    local has_key="false"
+    if [[ -n "$p_env" ]]; then
+      local key_val
+      eval "key_val=\"\${${p_env}:-}\""
+      if [[ -n "$key_val" ]]; then
+        has_key="true"
+      fi
+    fi
+    providers_with_keys="$(printf '%s' "$providers_with_keys" | jq --arg p "$p_id" --arg h "$has_key" '. + [{id: $p, has_key: ($h == "true")}]')"
+  done <<< "$p_list"
+
+  # Merge has_key info into response
+  response="$(printf '%s' "$response" | jq --argjson pk "$providers_with_keys" '
+    .providers = [.providers[] | . as $p | ($pk[] | select(.id == $p.id)) as $k | $p + {has_key: ($k.has_key // false)}]
+  ' 2>/dev/null)"
+
+  _http_respond_json 200 "$response"
+}
+
+# ---- REST API: Sessions ----
+
+_handle_api_sessions_list() {
+  require_command jq "sessions API requires jq"
+
+  local sessions="[]"
+  local session_dir="${BASHCLAW_STATE_DIR}/sessions"
+
+  if [[ -d "$session_dir" ]]; then
+    local f
+    for f in "${session_dir}"/*.jsonl; do
+      [[ -f "$f" ]] || continue
+      local name
+      name="$(basename "$f" .jsonl)"
+      local msg_count
+      msg_count="$(wc -l < "$f" | tr -d ' ')"
+      local size
+      size="$(wc -c < "$f" | tr -d ' ')"
+      sessions="$(printf '%s' "$sessions" | jq --arg n "$name" --argjson c "$msg_count" --argjson s "$size" \
+        '. + [{name: $n, messages: $c, size: $s}]')"
+    done
+  fi
+
+  _http_respond_json 200 "$(jq -nc --argjson s "$sessions" '{sessions: $s, count: ($s | length)}')"
+}
+
+# ---- REST API: Channels ----
+
+_handle_api_channels() {
+  require_command jq "channels API requires jq"
+
+  local channel_dir
+  channel_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/channels"
+
+  local channels="[]"
+  if [[ -d "$channel_dir" ]]; then
+    local f
+    for f in "${channel_dir}"/*.sh; do
+      [[ -f "$f" ]] || continue
+      local ch_name
+      ch_name="$(basename "$f" .sh)"
+      local enabled
+      enabled="$(config_channel_get "$ch_name" "enabled" "false")"
+      channels="$(printf '%s' "$channels" | jq --arg n "$ch_name" --arg e "$enabled" \
+        '. + [{name: $n, enabled: ($e == "true"), installed: true}]')"
+    done
+  fi
+
+  _http_respond_json 200 "$(jq -nc --argjson c "$channels" '{channels: $c, count: ($c | length)}')"
+}
+
+# ---- REST API: Env (API Keys) ----
+
+_handle_api_env_get() {
+  require_command jq "env API requires jq"
+
+  local catalog
+  catalog="$(_models_catalog_load)"
+
+  # List provider env vars and whether they are set (never expose actual values)
+  local env_status="[]"
+  local p_list
+  p_list="$(printf '%s' "$catalog" | jq -r '.providers | to_entries[] | "\(.key)|\(.value.api_key_env // "")"' 2>/dev/null)"
+  while IFS='|' read -r p_id p_env; do
+    [[ -z "$p_id" ]] && continue
+    local is_set="false"
+    if [[ -n "$p_env" ]]; then
+      local key_val
+      eval "key_val=\"\${${p_env}:-}\""
+      if [[ -n "$key_val" ]]; then
+        is_set="true"
+      fi
+    fi
+    env_status="$(printf '%s' "$env_status" | jq --arg p "$p_id" --arg e "$p_env" --arg s "$is_set" \
+      '. + [{provider: $p, env_var: $e, is_set: ($s == "true")}]')"
+  done <<< "$p_list"
+
+  # Also check search API keys
+  for search_key in BRAVE_SEARCH_API_KEY PERPLEXITY_API_KEY; do
+    local sk_val
+    eval "sk_val=\"\${${search_key}:-}\""
+    local sk_set="false"
+    if [[ -n "$sk_val" ]]; then
+      sk_set="true"
+    fi
+    env_status="$(printf '%s' "$env_status" | jq --arg e "$search_key" --arg s "$sk_set" \
+      '. + [{provider: "search", env_var: $e, is_set: ($s == "true")}]')"
+  done
+
+  _http_respond_json 200 "$(jq -nc --argjson e "$env_status" '{env: $e}')"
+}
+
+_handle_api_env_set() {
+  require_command jq "env API requires jq"
+
+  if [[ -z "$HTTP_BODY" ]]; then
+    _http_respond_json 400 '{"error":"request body required"}'
+    return
+  fi
+
+  local env_file="${BASHCLAW_STATE_DIR:?}/.env"
+  ensure_dir "$(dirname "$env_file")"
+
+  # Parse key-value pairs from body
+  local pairs
+  pairs="$(printf '%s' "$HTTP_BODY" | jq -r 'to_entries[] | "\(.key)=\(.value)"' 2>/dev/null)"
+  if [[ -z "$pairs" ]]; then
+    _http_respond_json 400 '{"error":"expected JSON object with key-value pairs"}'
+    return
+  fi
+
+  # Validate keys are known env vars
+  local catalog
+  catalog="$(_models_catalog_load)"
+  local known_keys
+  known_keys="$(printf '%s' "$catalog" | jq -r '[.providers[].api_key_env // empty] | join(" ")' 2>/dev/null)"
+  known_keys="$known_keys BRAVE_SEARCH_API_KEY PERPLEXITY_API_KEY"
+
+  local updated=0
+  while IFS='=' read -r env_key env_val; do
+    [[ -z "$env_key" ]] && continue
+
+    # Check if key is known
+    local is_known="false"
+    local k
+    for k in $known_keys; do
+      if [[ "$k" == "$env_key" ]]; then
+        is_known="true"
+        break
+      fi
+    done
+
+    if [[ "$is_known" != "true" ]]; then
+      continue
+    fi
+
+    # Update or append to .env file
+    if [[ -f "$env_file" ]] && grep -q "^${env_key}=" "$env_file" 2>/dev/null; then
+      # Update existing line (use temp file for portability)
+      local tmp_env
+      tmp_env="$(mktemp 2>/dev/null || mktemp -t bashclaw_env)"
+      while IFS= read -r line; do
+        if [[ "$line" == "${env_key}="* ]]; then
+          printf '%s=%s\n' "$env_key" "$env_val"
+        else
+          printf '%s\n' "$line"
+        fi
+      done < "$env_file" > "$tmp_env"
+      mv "$tmp_env" "$env_file"
+    else
+      printf '%s=%s\n' "$env_key" "$env_val" >> "$env_file"
+    fi
+
+    # Export to current process
+    export "${env_key}=${env_val}"
+    updated=$((updated + 1))
+  done <<< "$pairs"
+
+  chmod 600 "$env_file" 2>/dev/null || true
+
+  _http_respond_json 200 "$(jq -nc --argjson n "$updated" '{updated: $n}')"
 }
 
 # If executed directly (by socat), run the handler

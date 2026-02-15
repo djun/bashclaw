@@ -56,6 +56,7 @@ gateway_start() {
   trap 'gateway_reload' USR1
 
   log_info "Gateway starting on port $GATEWAY_PORT (pid=$$)"
+  printf 'Dashboard: http://localhost:%s\n' "$GATEWAY_PORT"
 
   # Start background services
   gateway_start_channels &
@@ -73,7 +74,6 @@ gateway_start() {
   elif is_command_available socat; then
     gateway_run_http
   else
-    log_warn "No websocat or socat available, running minimal HTTP with bash"
     gateway_run_bash_http
   fi
 
@@ -187,19 +187,33 @@ gateway_run_http() {
 }
 
 gateway_run_bash_http() {
-  log_info "Starting minimal HTTP server on port $GATEWAY_PORT"
-
   local handler_script
   handler_script="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/gateway/http_handler.sh"
 
-  while [[ "$GATEWAY_RUNNING" == "true" ]]; do
-    # Use bash built-in /dev/tcp if available, otherwise just sleep and log
-    if [[ -e /dev/tcp/localhost/"$GATEWAY_PORT" ]] 2>/dev/null; then
-      :
-    fi
-    # Minimal: just keep the process alive; real HTTP requires socat/websocat
-    sleep 5
-  done
+  if is_command_available nc; then
+    log_info "Starting HTTP server via nc on port $GATEWAY_PORT"
+    while [[ "$GATEWAY_RUNNING" == "true" ]]; do
+      # nc -l listens for one connection, pipes it through the handler script
+      # macOS nc: -l -p PORT; GNU nc: -l -p PORT or -l PORT
+      # Use a subshell to handle one request at a time
+      if [[ "$(uname -s)" == "Darwin" ]]; then
+        nc -l "$GATEWAY_PORT" -c "bash '$handler_script'" 2>/dev/null || \
+          bash -c "exec 3<>/dev/tcp/127.0.0.1/$GATEWAY_PORT 2>/dev/null; exec 3>&-" 2>/dev/null || \
+          true
+      else
+        nc -l -p "$GATEWAY_PORT" -e "bash '$handler_script'" 2>/dev/null || \
+          nc -l "$GATEWAY_PORT" -c "bash '$handler_script'" 2>/dev/null || \
+          true
+      fi
+    done
+  else
+    log_warn "No HTTP server available (need websocat, socat, or nc)"
+    log_warn "Gateway is running but cannot serve HTTP. Install socat: brew install socat"
+    log_warn "CLI and channel listeners will still work."
+    while [[ "$GATEWAY_RUNNING" == "true" ]]; do
+      sleep 10
+    done
+  fi
 }
 
 # ---- Channel Listeners ----

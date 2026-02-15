@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/logo.png" alt="BashClaw" width="600" />
+<img src="assets/logo.webp" alt="BashClaw" width="600" />
 
 **Bash is all you need.**
 

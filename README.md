@@ -496,7 +496,7 @@ Config file: `~/.bashclaw/bashclaw.json`
 {
   "agents": {
     "defaults": {
-      "model": "claude-sonnet-4-20250514",
+      "model": "claude-opus-4-6",
       "maxTurns": 50,
       "contextTokens": 200000,
       "tools": ["web_fetch", "web_search", "memory", "shell"]

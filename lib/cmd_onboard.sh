@@ -86,6 +86,7 @@ _onboard_api_key() {
   printf 'Choose provider:\n'
   printf '  1) Anthropic (Claude)\n'
   printf '  2) OpenAI (GPT)\n'
+  printf '  3) DeepSeek\n'
   printf 'Choice [1]: '
   local choice
   read -r choice
@@ -135,6 +136,20 @@ _onboard_api_key() {
       printf 'OPENAI_API_KEY=%s\n' "$api_key" >> "$env_file"
       chmod 600 "$env_file" 2>/dev/null || true
       config_set '.agents.defaults.model' '"gpt-4o"'
+      printf 'API key saved to %s\n' "$env_file"
+      ;;
+    3)
+      printf 'Enter your DeepSeek API key: '
+      local api_key
+      read -r -s api_key
+      printf '\n'
+      if [[ -z "$api_key" ]]; then
+        log_warn "No API key provided, skipping"
+        return 0
+      fi
+      printf 'DEEPSEEK_API_KEY=%s\n' "$api_key" >> "$env_file"
+      chmod 600 "$env_file" 2>/dev/null || true
+      config_set '.agents.defaults.model' '"deepseek-chat"'
       printf 'API key saved to %s\n' "$env_file"
       ;;
     *)

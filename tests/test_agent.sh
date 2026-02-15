@@ -23,7 +23,7 @@ setup_test_env
 cat > "$BASHCLAW_CONFIG" <<'EOF'
 {
   "agents": {
-    "defaults": {"model": "claude-sonnet-4-20250514"},
+    "defaults": {"model": "claude-opus-4-6"},
     "list": [{"id": "research", "model": "gpt-4o"}]
   }
 }
@@ -39,7 +39,7 @@ setup_test_env
 cat > "$BASHCLAW_CONFIG" <<'EOF'
 {
   "agents": {
-    "defaults": {"model": "claude-sonnet-4-20250514"},
+    "defaults": {"model": "claude-opus-4-6"},
     "list": [{"id": "research"}]
   }
 }
@@ -47,7 +47,7 @@ EOF
 _CONFIG_CACHE=""
 config_load
 result="$(agent_resolve_model "research")"
-assert_eq "$result" "claude-sonnet-4-20250514"
+assert_eq "$result" "claude-opus-4-6"
 teardown_test_env
 
 test_start "agent_resolve_model uses MODEL_ID env"
@@ -69,7 +69,7 @@ teardown_test_env
 
 test_start "agent_resolve_provider returns anthropic for claude models"
 setup_test_env
-result="$(agent_resolve_provider "claude-sonnet-4-20250514")"
+result="$(agent_resolve_provider "claude-opus-4-6")"
 assert_eq "$result" "anthropic"
 teardown_test_env
 

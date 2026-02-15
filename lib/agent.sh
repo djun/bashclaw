@@ -42,7 +42,28 @@ _models_catalog_load() {
   printf '%s' "$_MODELS_CATALOG_CACHE"
 }
 
-# Resolve model alias to actual model ID
+# Parse "provider/model" reference format.
+# If input contains "/", split into provider and model.
+# Otherwise resolve alias first, then look up provider from catalog.
+# Sets two variables: _PARSED_PROVIDER and _PARSED_MODEL
+_parse_model_ref() {
+  local raw="$1"
+  _PARSED_PROVIDER=""
+  _PARSED_MODEL=""
+
+  # Resolve alias first
+  local resolved
+  resolved="$(_model_resolve_alias "$raw")"
+
+  if [[ "$resolved" == *"/"* ]]; then
+    _PARSED_PROVIDER="${resolved%%/*}"
+    _PARSED_MODEL="${resolved#*/}"
+  else
+    _PARSED_MODEL="$resolved"
+  fi
+}
+
+# Resolve model alias to actual model ref (may include provider/ prefix)
 _model_resolve_alias() {
   local model="$1"
   local catalog
@@ -56,21 +77,48 @@ _model_resolve_alias() {
   fi
 }
 
+# Look up which provider owns a model ID by searching all providers
 _model_provider() {
   local model="$1"
   local catalog
   catalog="$(_models_catalog_load)"
   local provider
-  provider="$(printf '%s' "$catalog" | jq -r --arg m "$model" '.models[$m].provider // empty' 2>/dev/null)"
+  provider="$(printf '%s' "$catalog" | jq -r --arg m "$model" '
+    .providers | to_entries[] | select(.value.models[]?.id == $m) | .key
+  ' 2>/dev/null | head -1)"
   printf '%s' "$provider"
+}
+
+# Get a field from a model definition across all providers
+_model_get_field() {
+  local model="$1"
+  local field="$2"
+  local catalog
+  catalog="$(_models_catalog_load)"
+  local val
+  val="$(printf '%s' "$catalog" | jq -r --arg m "$model" --arg f "$field" '
+    [.providers[].models[] | select(.id == $m)] | .[0][$f] // empty
+  ' 2>/dev/null)"
+  printf '%s' "$val"
+}
+
+# Get a compat flag from a model definition
+_model_get_compat_field() {
+  local model="$1"
+  local field="$2"
+  local catalog
+  catalog="$(_models_catalog_load)"
+  local val
+  val="$(printf '%s' "$catalog" | jq -r --arg m "$model" --arg f "$field" '
+    [.providers[].models[] | select(.id == $m)] | .[0].compat[$f] // empty
+  ' 2>/dev/null)"
+  printf '%s' "$val"
 }
 
 _model_max_tokens() {
   local model="$1"
-  local catalog
-  catalog="$(_models_catalog_load)"
   local tokens
-  tokens="$(printf '%s' "$catalog" | jq -r --arg m "$model" '.models[$m].max_tokens // empty' 2>/dev/null)"
+  tokens="$(_model_get_field "$model" "max_tokens")"
   if [[ -z "$tokens" ]]; then
     printf '4096'
   else
@@ -80,10 +128,8 @@ _model_max_tokens() {
 
 _model_context_window() {
   local model="$1"
-  local catalog
-  catalog="$(_models_catalog_load)"
   local window
-  window="$(printf '%s' "$catalog" | jq -r --arg m "$model" '.models[$m].context_window // empty' 2>/dev/null)"
+  window="$(_model_get_field "$model" "context_window")"
   if [[ -z "$window" ]]; then
     printf '128000'
   else
@@ -102,17 +148,25 @@ agent_resolve_model() {
   local model
   model="$(config_agent_get "$agent_id" "model" "")"
   if [[ -z "$model" ]]; then
-    model="${MODEL_ID:-claude-sonnet-4-20250514}"
+    model="${MODEL_ID:-claude-opus-4-6}"
   fi
 
-  # Resolve alias to actual model ID
-  model="$(_model_resolve_alias "$model")"
-  printf '%s' "$model"
+  # Parse provider/model ref (resolves aliases internally)
+  _parse_model_ref "$model"
+  printf '%s' "$_PARSED_MODEL"
 }
 
 agent_resolve_provider() {
   local model="$1"
 
+  # If caller already set _PARSED_PROVIDER from _parse_model_ref, use it
+  if [[ -n "${_PARSED_PROVIDER:-}" ]]; then
+    printf '%s' "$_PARSED_PROVIDER"
+    _PARSED_PROVIDER=""
+    return
+  fi
+
+  # Look up provider from catalog
   local provider
   provider="$(_model_provider "$model")"
   if [[ -n "$provider" ]]; then
@@ -122,14 +176,20 @@ agent_resolve_provider() {
 
   # Infer provider from model name patterns
   case "$model" in
-    claude-*|claude3*)       printf 'anthropic'; return ;;
-    gpt-*|o1*|o3*|o4*)      printf 'openai'; return ;;
-    gemini-*)                printf 'google'; return ;;
-    deepseek-*)              printf 'deepseek'; return ;;
-    qwen-*|qwq-*)           printf 'qwen'; return ;;
-    glm-*)                   printf 'zhipu'; return ;;
-    moonshot-*|kimi-*)       printf 'moonshot'; return ;;
-    MiniMax-*|minimax-*|abab*)  printf 'minimax'; return ;;
+    claude-*)                    printf 'anthropic'; return ;;
+    gpt-*|o1*|o3*|o4*)          printf 'openai'; return ;;
+    gemini-*)                    printf 'google'; return ;;
+    deepseek-*)                  printf 'deepseek'; return ;;
+    qwen-*|qwq-*)               printf 'qwen'; return ;;
+    glm-*)                       printf 'zhipu'; return ;;
+    moonshot-*|kimi-*)           printf 'moonshot'; return ;;
+    MiniMax-*|minimax-*|abab*)   printf 'minimax'; return ;;
+    mimo-*)                      printf 'xiaomi'; return ;;
+    ernie-*)                     printf 'qianfan'; return ;;
+    nvidia/*)                    printf 'nvidia'; return ;;
+    llama-*|meta/*)              printf 'groq'; return ;;
+    grok-*)                      printf 'xai'; return ;;
+    mistral-*)                   printf 'mistral'; return ;;
   esac
 
   # If OPENROUTER_API_KEY is set and model is unknown, assume openrouter
@@ -150,7 +210,6 @@ agent_resolve_api_key() {
   local catalog
   catalog="$(_models_catalog_load)"
 
-  # Look up the env var name for this provider from models.json
   local key_env
   key_env="$(printf '%s' "$catalog" | jq -r --arg p "$provider" \
     '.providers[$p].api_key_env // empty' 2>/dev/null)"
@@ -159,9 +218,23 @@ agent_resolve_api_key() {
     log_fatal "Unknown provider: $provider (not found in models.json)"
   fi
 
-  # Read the actual key value from the environment
   local key
   eval "key=\"\${${key_env}:-}\""
+
+  # Backward compat: check legacy env var names
+  if [[ -z "$key" ]]; then
+    case "$provider" in
+      google)  key="${GOOGLE_API_KEY:-}" ;;
+      zhipu)   key="${ZHIPU_API_KEY:-}" ;;
+    esac
+  fi
+
+  # Ollama/vLLM: API key is optional for local providers
+  if [[ -z "$key" ]]; then
+    case "$provider" in
+      ollama|vllm) key="no-key-required"; return 0 ;;
+    esac
+  fi
 
   if [[ -z "$key" ]]; then
     log_fatal "${key_env} is required for ${provider} provider"
@@ -176,24 +249,31 @@ _provider_api_url() {
   local catalog
   catalog="$(_models_catalog_load)"
 
-  # Check for env var override first
-  local url_env
-  url_env="$(printf '%s' "$catalog" | jq -r --arg p "$provider" \
-    '.providers[$p].api_url_env // empty' 2>/dev/null)"
+  local url_default
+  url_default="$(printf '%s' "$catalog" | jq -r --arg p "$provider" \
+    '.providers[$p].base_url // empty' 2>/dev/null)"
 
-  if [[ -n "$url_env" ]]; then
+  # Check env var override: {PROVIDER}_BASE_URL
+  local env_key
+  case "$provider" in
+    anthropic)  env_key="ANTHROPIC_BASE_URL" ;;
+    openai)     env_key="OPENAI_BASE_URL" ;;
+    google)     env_key="GOOGLE_AI_BASE_URL" ;;
+    openrouter) env_key="OPENROUTER_BASE_URL" ;;
+    ollama)     env_key="OLLAMA_BASE_URL" ;;
+    vllm)       env_key="VLLM_BASE_URL" ;;
+    *)          env_key="" ;;
+  esac
+
+  if [[ -n "$env_key" ]]; then
     local url_override
-    eval "url_override=\"\${${url_env}:-}\""
+    eval "url_override=\"\${${env_key}:-}\""
     if [[ -n "$url_override" ]]; then
       printf '%s' "$url_override"
       return
     fi
   fi
 
-  # Fall back to default URL
-  local url_default
-  url_default="$(printf '%s' "$catalog" | jq -r --arg p "$provider" \
-    '.providers[$p].api_url_default // empty' 2>/dev/null)"
   printf '%s' "$url_default"
 }
 
@@ -205,13 +285,22 @@ _provider_api_format() {
   catalog="$(_models_catalog_load)"
   local fmt
   fmt="$(printf '%s' "$catalog" | jq -r --arg p "$provider" \
-    '.providers[$p].api_format // empty' 2>/dev/null)"
+    '.providers[$p].api // empty' 2>/dev/null)"
 
   if [[ -z "$fmt" ]]; then
     printf 'openai'
   else
     printf '%s' "$fmt"
   fi
+}
+
+# Get the API version header value for a provider (e.g. anthropic)
+_provider_api_version() {
+  local provider="$1"
+  local catalog
+  catalog="$(_models_catalog_load)"
+  printf '%s' "$(printf '%s' "$catalog" | jq -r --arg p "$provider" \
+    '.providers[$p].api_version // empty' 2>/dev/null)"
 }
 
 # Resolve the next fallback model from the configured fallback chain.
@@ -817,6 +906,14 @@ agent_call_openai() {
 
   local api_url="${api_base}/v1/chat/completions"
 
+  # Check if model uses max_completion_tokens (o-series models)
+  local max_tokens_field="max_tokens"
+  local compat_field
+  compat_field="$(_model_get_compat_field "$model" "max_tokens_field")"
+  if [[ -n "$compat_field" ]]; then
+    max_tokens_field="$compat_field"
+  fi
+
   local oai_messages
   oai_messages="$(printf '%s' "$messages" | jq --arg sys "$system_prompt" \
     '[{role: "system", content: $sys}] + .')"
@@ -841,10 +938,11 @@ agent_call_openai() {
       --argjson max_tokens "$max_tokens" \
       --argjson temp "$temperature" \
       --argjson tools "$oai_tools" \
+      --arg mtf "$max_tokens_field" \
       '{
         model: $model,
         messages: $messages,
-        max_tokens: $max_tokens,
+        ($mtf): $max_tokens,
         temperature: $temp,
         tools: $tools
       }')"
@@ -854,10 +952,11 @@ agent_call_openai() {
       --argjson messages "$oai_messages" \
       --argjson max_tokens "$max_tokens" \
       --argjson temp "$temperature" \
+      --arg mtf "$max_tokens_field" \
       '{
         model: $model,
         messages: $messages,
-        max_tokens: $max_tokens,
+        ($mtf): $max_tokens,
         temperature: $temp
       }')"
   fi

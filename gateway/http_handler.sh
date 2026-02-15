@@ -484,18 +484,19 @@ _handle_api_models() {
   # Return models with provider info and aliases
   local response
   response="$(printf '%s' "$catalog" | jq '{
-    models: [.models | to_entries[] | {
-      id: .key,
-      provider: .value.provider,
-      max_tokens: .value.max_tokens,
-      context_window: .value.context_window,
-      supports_images: .value.supports_images,
-      supports_thinking: .value.supports_thinking
+    models: [.providers | to_entries[] | .key as $prov | .value.models[]? | {
+      id: .id,
+      name: .name,
+      provider: $prov,
+      max_tokens: .max_tokens,
+      context_window: .context_window,
+      reasoning: .reasoning,
+      input: .input
     }],
     aliases: .aliases,
     providers: [.providers | to_entries[] | {
       id: .key,
-      api_format: .value.api_format,
+      api: .value.api,
       api_key_env: .value.api_key_env,
       has_key: false
     }]

@@ -1,242 +1,394 @@
 {
-  "models": {
-    "claude-opus-4-20250918": {
-      "provider": "anthropic",
-      "max_tokens": 4096,
-      "context_window": 200000,
-      "supports_images": true,
-      "supports_thinking": true
+  "providers": {
+    "anthropic": {
+      "api": "anthropic",
+      "base_url": "https://api.anthropic.com",
+      "api_key_env": "ANTHROPIC_API_KEY",
+      "api_version": "2023-06-01",
+      "models": [
+        {
+          "id": "claude-opus-4-6",
+          "name": "Claude Opus 4.6",
+          "reasoning": true,
+          "input": ["text", "image"],
+          "cost": { "input": 15, "output": 75, "cache_read": 1.5, "cache_write": 18.75 },
+          "context_window": 200000,
+          "max_tokens": 16384
+        },
+        {
+          "id": "claude-sonnet-4-20250514",
+          "name": "Claude Sonnet 4",
+          "reasoning": true,
+          "input": ["text", "image"],
+          "cost": { "input": 3, "output": 15, "cache_read": 0.3, "cache_write": 3.75 },
+          "context_window": 200000,
+          "max_tokens": 16384
+        },
+        {
+          "id": "claude-haiku-3-20250307",
+          "name": "Claude Haiku 3",
+          "reasoning": false,
+          "input": ["text", "image"],
+          "cost": { "input": 0.25, "output": 1.25, "cache_read": 0.03, "cache_write": 0.3 },
+          "context_window": 200000,
+          "max_tokens": 4096
+        }
+      ]
     },
-    "claude-sonnet-4-20250514": {
-      "provider": "anthropic",
-      "max_tokens": 8192,
-      "context_window": 200000,
-      "supports_images": true,
-      "supports_thinking": true
+    "openai": {
+      "api": "openai",
+      "base_url": "https://api.openai.com",
+      "api_key_env": "OPENAI_API_KEY",
+      "models": [
+        {
+          "id": "gpt-4o",
+          "name": "GPT-4o",
+          "reasoning": false,
+          "input": ["text", "image"],
+          "cost": { "input": 2.5, "output": 10, "cache_read": 1.25, "cache_write": 2.5 },
+          "context_window": 128000,
+          "max_tokens": 16384
+        },
+        {
+          "id": "gpt-4o-mini",
+          "name": "GPT-4o Mini",
+          "reasoning": false,
+          "input": ["text", "image"],
+          "cost": { "input": 0.15, "output": 0.6, "cache_read": 0.075, "cache_write": 0.15 },
+          "context_window": 128000,
+          "max_tokens": 16384
+        },
+        {
+          "id": "o1",
+          "name": "o1",
+          "reasoning": true,
+          "input": ["text", "image"],
+          "cost": { "input": 15, "output": 60, "cache_read": 7.5, "cache_write": 15 },
+          "context_window": 200000,
+          "max_tokens": 100000,
+          "compat": { "max_tokens_field": "max_completion_tokens" }
+        },
+        {
+          "id": "o3-mini",
+          "name": "o3-mini",
+          "reasoning": true,
+          "input": ["text"],
+          "cost": { "input": 1.1, "output": 4.4, "cache_read": 0.55, "cache_write": 1.1 },
+          "context_window": 200000,
+          "max_tokens": 100000,
+          "compat": { "max_tokens_field": "max_completion_tokens" }
+        }
+      ]
     },
-    "claude-haiku-3-20250307": {
-      "provider": "anthropic",
-      "max_tokens": 4096,
-      "context_window": 200000,
-      "supports_images": true,
-      "supports_thinking": false
+    "google": {
+      "api": "google",
+      "base_url": "https://generativelanguage.googleapis.com",
+      "api_key_env": "GEMINI_API_KEY",
+      "models": [
+        {
+          "id": "gemini-2.0-flash",
+          "name": "Gemini 2.0 Flash",
+          "reasoning": true,
+          "input": ["text", "image"],
+          "cost": { "input": 0.1, "output": 0.4, "cache_read": 0.025, "cache_write": 0.1 },
+          "context_window": 1048576,
+          "max_tokens": 8192
+        },
+        {
+          "id": "gemini-2.0-flash-lite",
+          "name": "Gemini 2.0 Flash Lite",
+          "reasoning": false,
+          "input": ["text", "image"],
+          "cost": { "input": 0.075, "output": 0.3, "cache_read": 0.02, "cache_write": 0.075 },
+          "context_window": 1048576,
+          "max_tokens": 8192
+        },
+        {
+          "id": "gemini-1.5-pro",
+          "name": "Gemini 1.5 Pro",
+          "reasoning": false,
+          "input": ["text", "image"],
+          "cost": { "input": 1.25, "output": 5, "cache_read": 0.3, "cache_write": 1.25 },
+          "context_window": 2097152,
+          "max_tokens": 8192
+        }
+      ]
     },
-    "gpt-4o": {
-      "provider": "openai",
-      "max_tokens": 4096,
-      "context_window": 128000,
-      "supports_images": true,
-      "supports_thinking": false
+    "deepseek": {
+      "api": "openai",
+      "base_url": "https://api.deepseek.com",
+      "api_key_env": "DEEPSEEK_API_KEY",
+      "models": [
+        {
+          "id": "deepseek-chat",
+          "name": "DeepSeek V3",
+          "reasoning": false,
+          "input": ["text"],
+          "cost": { "input": 0.27, "output": 1.1, "cache_read": 0.07, "cache_write": 0.27 },
+          "context_window": 128000,
+          "max_tokens": 8192
+        },
+        {
+          "id": "deepseek-reasoner",
+          "name": "DeepSeek R1",
+          "reasoning": true,
+          "input": ["text"],
+          "cost": { "input": 0.55, "output": 2.19, "cache_read": 0.14, "cache_write": 0.55 },
+          "context_window": 128000,
+          "max_tokens": 8192
+        }
+      ]
     },
-    "gpt-4o-mini": {
-      "provider": "openai",
-      "max_tokens": 4096,
-      "context_window": 128000,
-      "supports_images": true,
-      "supports_thinking": false
+    "qwen": {
+      "api": "openai",
+      "base_url": "https://dashscope.aliyuncs.com/compatible-mode",
+      "api_key_env": "QWEN_API_KEY",
+      "models": [
+        {
+          "id": "qwen-max",
+          "name": "Qwen Max",
+          "reasoning": false,
+          "input": ["text"],
+          "cost": { "input": 2.4, "output": 9.6, "cache_read": 0, "cache_write": 0 },
+          "context_window": 128000,
+          "max_tokens": 8192
+        },
+        {
+          "id": "qwen-plus",
+          "name": "Qwen Plus",
+          "reasoning": false,
+          "input": ["text"],
+          "cost": { "input": 0.8, "output": 2, "cache_read": 0, "cache_write": 0 },
+          "context_window": 128000,
+          "max_tokens": 8192
+        },
+        {
+          "id": "qwq-plus",
+          "name": "QwQ Plus",
+          "reasoning": true,
+          "input": ["text"],
+          "cost": { "input": 0.8, "output": 2, "cache_read": 0, "cache_write": 0 },
+          "context_window": 128000,
+          "max_tokens": 8192,
+          "compat": { "thinking_format": "qwen" }
+        }
+      ]
     },
-    "gpt-4-turbo": {
-      "provider": "openai",
-      "max_tokens": 4096,
-      "context_window": 128000,
-      "supports_images": true,
-      "supports_thinking": false
+    "zhipu": {
+      "api": "openai",
+      "base_url": "https://open.bigmodel.cn/api/paas/v4",
+      "api_key_env": "ZAI_API_KEY",
+      "models": [
+        {
+          "id": "glm-5",
+          "name": "GLM-5",
+          "reasoning": true,
+          "input": ["text", "image"],
+          "cost": { "input": 0, "output": 0, "cache_read": 0, "cache_write": 0 },
+          "context_window": 128000,
+          "max_tokens": 4096,
+          "compat": { "thinking_format": "zai" }
+        },
+        {
+          "id": "glm-4-flash",
+          "name": "GLM-4 Flash",
+          "reasoning": false,
+          "input": ["text"],
+          "cost": { "input": 0, "output": 0, "cache_read": 0, "cache_write": 0 },
+          "context_window": 128000,
+          "max_tokens": 4096
+        }
+      ]
     },
-    "o1": {
-      "provider": "openai",
-      "max_tokens": 4096,
-      "context_window": 200000,
-      "supports_images": false,
-      "supports_thinking": true
+    "moonshot": {
+      "api": "openai",
+      "base_url": "https://api.moonshot.ai/v1",
+      "api_key_env": "MOONSHOT_API_KEY",
+      "models": [
+        {
+          "id": "kimi-k2.5",
+          "name": "Kimi K2.5",
+          "reasoning": false,
+          "input": ["text"],
+          "cost": { "input": 0, "output": 0, "cache_read": 0, "cache_write": 0 },
+          "context_window": 256000,
+          "max_tokens": 8192
+        }
+      ]
     },
-    "o1-mini": {
-      "provider": "openai",
-      "max_tokens": 4096,
-      "context_window": 128000,
-      "supports_images": false,
-      "supports_thinking": true
+    "minimax": {
+      "api": "openai",
+      "base_url": "https://api.minimax.io",
+      "api_key_env": "MINIMAX_API_KEY",
+      "models": [
+        {
+          "id": "MiniMax-M2.5",
+          "name": "MiniMax M2.5",
+          "reasoning": true,
+          "input": ["text"],
+          "cost": { "input": 15, "output": 60, "cache_read": 2, "cache_write": 10 },
+          "context_window": 200000,
+          "max_tokens": 8192
+        },
+        {
+          "id": "MiniMax-M2.1",
+          "name": "MiniMax M2.1",
+          "reasoning": false,
+          "input": ["text"],
+          "cost": { "input": 15, "output": 60, "cache_read": 2, "cache_write": 10 },
+          "context_window": 200000,
+          "max_tokens": 8192
+        }
+      ]
     },
-    "o3-mini": {
-      "provider": "openai",
-      "max_tokens": 4096,
-      "context_window": 128000,
-      "supports_images": false,
-      "supports_thinking": true
+    "xiaomi": {
+      "api": "anthropic",
+      "base_url": "https://api.xiaomimimo.com/anthropic",
+      "api_key_env": "XIAOMI_API_KEY",
+      "models": [
+        {
+          "id": "mimo-v2-flash",
+          "name": "MiMo V2 Flash",
+          "reasoning": false,
+          "input": ["text"],
+          "cost": { "input": 0, "output": 0, "cache_read": 0, "cache_write": 0 },
+          "context_window": 262144,
+          "max_tokens": 8192
+        }
+      ]
     },
-    "gemini-2.0-flash": {
-      "provider": "google",
-      "max_tokens": 8192,
-      "context_window": 1048576,
-      "supports_images": true,
-      "supports_thinking": true
+    "qianfan": {
+      "api": "openai",
+      "base_url": "https://qianfan.baidubce.com/v2",
+      "api_key_env": "QIANFAN_API_KEY",
+      "models": [
+        {
+          "id": "deepseek-v3.2",
+          "name": "DeepSeek V3.2 (Baidu)",
+          "reasoning": true,
+          "input": ["text"],
+          "cost": { "input": 0, "output": 0, "cache_read": 0, "cache_write": 0 },
+          "context_window": 98304,
+          "max_tokens": 32768
+        },
+        {
+          "id": "ernie-5.0-thinking-preview",
+          "name": "ERNIE 5.0 Thinking Preview",
+          "reasoning": true,
+          "input": ["text", "image"],
+          "cost": { "input": 0, "output": 0, "cache_read": 0, "cache_write": 0 },
+          "context_window": 119000,
+          "max_tokens": 64000
+        }
+      ]
     },
-    "gemini-2.0-flash-lite": {
-      "provider": "google",
-      "max_tokens": 8192,
-      "context_window": 1048576,
-      "supports_images": true,
-      "supports_thinking": false
+    "nvidia": {
+      "api": "openai",
+      "base_url": "https://integrate.api.nvidia.com/v1",
+      "api_key_env": "NVIDIA_API_KEY",
+      "models": [
+        {
+          "id": "nvidia/llama-3.1-nemotron-70b-instruct",
+          "name": "NVIDIA Llama 3.1 Nemotron 70B",
+          "reasoning": false,
+          "input": ["text"],
+          "cost": { "input": 0, "output": 0, "cache_read": 0, "cache_write": 0 },
+          "context_window": 131072,
+          "max_tokens": 4096
+        }
+      ]
     },
-    "gemini-1.5-pro": {
-      "provider": "google",
-      "max_tokens": 8192,
-      "context_window": 2097152,
-      "supports_images": true,
-      "supports_thinking": false
+    "groq": {
+      "api": "openai",
+      "base_url": "https://api.groq.com/openai",
+      "api_key_env": "GROQ_API_KEY",
+      "models": [
+        {
+          "id": "llama-3.3-70b-versatile",
+          "name": "Llama 3.3 70B (Groq)",
+          "reasoning": false,
+          "input": ["text"],
+          "cost": { "input": 0.59, "output": 0.79, "cache_read": 0, "cache_write": 0 },
+          "context_window": 128000,
+          "max_tokens": 32768
+        }
+      ]
     },
-    "gemini-1.5-flash": {
-      "provider": "google",
-      "max_tokens": 8192,
-      "context_window": 1048576,
-      "supports_images": true,
-      "supports_thinking": false
+    "xai": {
+      "api": "openai",
+      "base_url": "https://api.x.ai",
+      "api_key_env": "XAI_API_KEY",
+      "models": [
+        {
+          "id": "grok-3",
+          "name": "Grok 3",
+          "reasoning": true,
+          "input": ["text"],
+          "cost": { "input": 3, "output": 15, "cache_read": 0, "cache_write": 0 },
+          "context_window": 131072,
+          "max_tokens": 16384
+        }
+      ]
     },
-    "deepseek-chat": {
-      "provider": "deepseek",
-      "max_tokens": 8192,
-      "context_window": 128000,
-      "supports_images": false,
-      "supports_thinking": false
+    "mistral": {
+      "api": "openai",
+      "base_url": "https://api.mistral.ai",
+      "api_key_env": "MISTRAL_API_KEY",
+      "models": [
+        {
+          "id": "mistral-large-latest",
+          "name": "Mistral Large",
+          "reasoning": false,
+          "input": ["text"],
+          "cost": { "input": 2, "output": 6, "cache_read": 0, "cache_write": 0 },
+          "context_window": 128000,
+          "max_tokens": 8192
+        }
+      ]
     },
-    "deepseek-reasoner": {
-      "provider": "deepseek",
-      "max_tokens": 8192,
-      "context_window": 128000,
-      "supports_images": false,
-      "supports_thinking": true
+    "together": {
+      "api": "openai",
+      "base_url": "https://api.together.xyz",
+      "api_key_env": "TOGETHER_API_KEY",
+      "models": []
     },
-    "qwen-max": {
-      "provider": "qwen",
-      "max_tokens": 8192,
-      "context_window": 128000,
-      "supports_images": false,
-      "supports_thinking": false
+    "openrouter": {
+      "api": "openai",
+      "base_url": "https://openrouter.ai/api",
+      "api_key_env": "OPENROUTER_API_KEY",
+      "models": []
     },
-    "qwen-plus": {
-      "provider": "qwen",
-      "max_tokens": 8192,
-      "context_window": 128000,
-      "supports_images": false,
-      "supports_thinking": false
+    "ollama": {
+      "api": "openai",
+      "base_url": "http://localhost:11434",
+      "api_key_env": "OLLAMA_API_KEY",
+      "models": []
     },
-    "qwen-turbo": {
-      "provider": "qwen",
-      "max_tokens": 8192,
-      "context_window": 128000,
-      "supports_images": false,
-      "supports_thinking": false
-    },
-    "qwq-plus": {
-      "provider": "qwen",
-      "max_tokens": 8192,
-      "context_window": 128000,
-      "supports_images": false,
-      "supports_thinking": true
-    },
-    "glm-5": {
-      "provider": "zhipu",
-      "max_tokens": 4096,
-      "context_window": 128000,
-      "supports_images": true,
-      "supports_thinking": true
-    },
-    "glm-4-flash": {
-      "provider": "zhipu",
-      "max_tokens": 4096,
-      "context_window": 128000,
-      "supports_images": false,
-      "supports_thinking": false
-    },
-    "kimi-2.5": {
-      "provider": "moonshot",
-      "max_tokens": 8192,
-      "context_window": 256000,
-      "supports_images": false,
-      "supports_thinking": true
-    },
-    "moonshot-v1-128k": {
-      "provider": "moonshot",
-      "max_tokens": 4096,
-      "context_window": 128000,
-      "supports_images": false,
-      "supports_thinking": false
-    },
-    "minimax-2.5": {
-      "provider": "minimax",
-      "max_tokens": 8192,
-      "context_window": 128000,
-      "supports_images": false,
-      "supports_thinking": true
+    "vllm": {
+      "api": "openai",
+      "base_url": "http://127.0.0.1:8000",
+      "api_key_env": "VLLM_API_KEY",
+      "models": []
     }
   },
   "aliases": {
-    "fast": "gemini-2.0-flash",
-    "smart": "claude-opus-4-20250918",
-    "balanced": "claude-sonnet-4-20250514",
-    "cheap": "gpt-4o-mini",
-    "claude": "claude-sonnet-4-20250514",
-    "gpt": "gpt-4o",
-    "gemini": "gemini-2.0-flash",
-    "opus": "claude-opus-4-20250918",
-    "sonnet": "claude-sonnet-4-20250514",
-    "haiku": "claude-haiku-3-20250307",
-    "flash": "gemini-2.0-flash",
-    "deepseek": "deepseek-chat",
-    "qwen": "qwen-max",
-    "glm": "glm-5",
-    "kimi": "kimi-2.5",
-    "minimax": "minimax-2.5"
-  },
-  "providers": {
-    "anthropic": {
-      "api_format": "anthropic",
-      "api_url_env": "ANTHROPIC_BASE_URL",
-      "api_url_default": "https://api.anthropic.com",
-      "api_key_env": "ANTHROPIC_API_KEY",
-      "api_version": "2023-06-01"
-    },
-    "openai": {
-      "api_format": "openai",
-      "api_url_env": "OPENAI_BASE_URL",
-      "api_url_default": "https://api.openai.com",
-      "api_key_env": "OPENAI_API_KEY"
-    },
-    "google": {
-      "api_format": "google",
-      "api_url_env": "GOOGLE_AI_BASE_URL",
-      "api_url_default": "https://generativelanguage.googleapis.com",
-      "api_key_env": "GOOGLE_API_KEY"
-    },
-    "openrouter": {
-      "api_format": "openai",
-      "api_url_env": "OPENROUTER_BASE_URL",
-      "api_url_default": "https://openrouter.ai/api",
-      "api_key_env": "OPENROUTER_API_KEY"
-    },
-    "deepseek": {
-      "api_format": "openai",
-      "api_url_default": "https://api.deepseek.com",
-      "api_key_env": "DEEPSEEK_API_KEY"
-    },
-    "qwen": {
-      "api_format": "openai",
-      "api_url_default": "https://dashscope.aliyuncs.com/compatible-mode",
-      "api_key_env": "QWEN_API_KEY"
-    },
-    "zhipu": {
-      "api_format": "openai",
-      "api_url_default": "https://open.bigmodel.cn/api/paas/v4",
-      "api_key_env": "ZHIPU_API_KEY"
-    },
-    "moonshot": {
-      "api_format": "openai",
-      "api_url_default": "https://api.moonshot.cn",
-      "api_key_env": "MOONSHOT_API_KEY"
-    },
-    "minimax": {
-      "api_format": "openai",
-      "api_url_default": "https://api.minimax.io",
-      "api_key_env": "MINIMAX_API_KEY"
-    }
+    "opus": "anthropic/claude-opus-4-6",
+    "sonnet": "anthropic/claude-sonnet-4-20250514",
+    "haiku": "anthropic/claude-haiku-3-20250307",
+    "claude": "anthropic/claude-sonnet-4-20250514",
+    "gpt": "openai/gpt-4o",
+    "gemini": "google/gemini-2.0-flash",
+    "flash": "google/gemini-2.0-flash",
+    "deepseek": "deepseek/deepseek-chat",
+    "qwen": "qwen/qwen-max",
+    "glm": "zhipu/glm-5",
+    "kimi": "moonshot/kimi-k2.5",
+    "minimax": "minimax/MiniMax-M2.5",
+    "grok": "xai/grok-3",
+    "mistral": "mistral/mistral-large-latest",
+    "smart": "anthropic/claude-opus-4-6",
+    "fast": "google/gemini-2.0-flash",
+    "balanced": "anthropic/claude-sonnet-4-20250514",
+    "cheap": "openai/gpt-4o-mini"
   }
 }

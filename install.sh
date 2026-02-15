@@ -306,7 +306,7 @@ _create_default_config() {
 {
   "agents": {
     "defaults": {
-      "model": "claude-sonnet-4-20250514",
+      "model": "claude-opus-4-6",
       "maxTurns": 50,
       "contextTokens": 200000
     },

@@ -336,8 +336,8 @@
       { label: 'Provider', value: model.provider },
       { label: 'Max Tokens', value: (model.max_tokens || 0).toLocaleString() },
       { label: 'Context', value: (model.context_window || 0).toLocaleString() },
-      { label: 'Images', value: model.supports_images ? 'Yes' : 'No' },
-      { label: 'Thinking', value: model.supports_thinking ? 'Yes' : 'No' }
+      { label: 'Input', value: (model.input || []).join(', ') || 'text' },
+      { label: 'Reasoning', value: model.reasoning ? 'Yes' : 'No' }
     ];
 
     fields.forEach(function(f) {

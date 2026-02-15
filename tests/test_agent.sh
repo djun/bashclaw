@@ -81,7 +81,7 @@ teardown_test_env
 
 test_start "agent_resolve_provider returns zhipu for glm models"
 setup_test_env
-result="$(agent_resolve_provider "glm-4.7-flash")"
+result="$(agent_resolve_provider "glm-5")"
 assert_eq "$result" "zhipu"
 teardown_test_env
 

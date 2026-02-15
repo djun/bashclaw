@@ -142,25 +142,16 @@ MODEL_ID=qwen-max bashclaw agent -m "hello"
 
 # Zhipu GLM
 export ZHIPU_API_KEY="..."
-MODEL_ID=glm-4.7-flash bashclaw agent -m "hello"
+MODEL_ID=glm-5 bashclaw agent -m "hello"
 
 # Moonshot Kimi
 export MOONSHOT_API_KEY="sk-..."
-MODEL_ID=kimi-k2.5 bashclaw agent -m "hello"
+MODEL_ID=kimi-2.5 bashclaw agent -m "hello"
 
 # MiniMax
 export MINIMAX_API_KEY="..."
-MODEL_ID=MiniMax-M2.5 bashclaw agent -m "hello"
+MODEL_ID=minimax-2.5 bashclaw agent -m "hello"
 ```
-
-### Free Tier Models
-
-| Model | Provider | Free Quota |
-|-------|----------|------------|
-| glm-4.7-flash | Zhipu | Free |
-| glm-4.5-flash | Zhipu | Free |
-| deepseek-chat | DeepSeek | 5M tokens (30-day for new accounts) |
-| qwen-turbo | Qwen | Free quota (90-day for new accounts) |
 
 ### Model Aliases
 
@@ -169,10 +160,11 @@ MODEL_ID=fast      # -> gemini-2.0-flash
 MODEL_ID=smart     # -> claude-opus-4
 MODEL_ID=balanced  # -> claude-sonnet-4
 MODEL_ID=cheap     # -> gpt-4o-mini
-MODEL_ID=free      # -> glm-4.7-flash
 MODEL_ID=deepseek  # -> deepseek-chat
 MODEL_ID=qwen      # -> qwen-max
-MODEL_ID=kimi      # -> kimi-k2.5
+MODEL_ID=glm       # -> glm-5
+MODEL_ID=kimi      # -> kimi-2.5
+MODEL_ID=minimax   # -> minimax-2.5
 ```
 
 ## Channels

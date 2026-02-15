@@ -143,25 +143,16 @@ MODEL_ID=qwen-max bashclaw agent -m "hello"
 
 # 智谱 GLM
 export ZHIPU_API_KEY="..."
-MODEL_ID=glm-4.7-flash bashclaw agent -m "hello"
+MODEL_ID=glm-5 bashclaw agent -m "hello"
 
 # Moonshot Kimi
 export MOONSHOT_API_KEY="sk-..."
-MODEL_ID=kimi-k2.5 bashclaw agent -m "hello"
+MODEL_ID=kimi-2.5 bashclaw agent -m "hello"
 
 # MiniMax
 export MINIMAX_API_KEY="..."
-MODEL_ID=MiniMax-M2.5 bashclaw agent -m "hello"
+MODEL_ID=minimax-2.5 bashclaw agent -m "hello"
 ```
-
-### 免费模型
-
-| 模型 | 提供者 | 免费额度 |
-|------|--------|----------|
-| glm-4.7-flash | 智谱 | 免费 |
-| glm-4.5-flash | 智谱 | 免费 |
-| deepseek-chat | DeepSeek | 500 万 token (新用户 30 天) |
-| qwen-turbo | 通义千问 | 免费额度 (新用户 90 天) |
 
 ### 模型别名
 
@@ -170,10 +161,11 @@ MODEL_ID=fast      # -> gemini-2.0-flash
 MODEL_ID=smart     # -> claude-opus-4
 MODEL_ID=balanced  # -> claude-sonnet-4
 MODEL_ID=cheap     # -> gpt-4o-mini
-MODEL_ID=free      # -> glm-4.7-flash
 MODEL_ID=deepseek  # -> deepseek-chat
 MODEL_ID=qwen      # -> qwen-max
-MODEL_ID=kimi      # -> kimi-k2.5
+MODEL_ID=glm       # -> glm-5
+MODEL_ID=kimi      # -> kimi-2.5
+MODEL_ID=minimax   # -> minimax-2.5
 ```
 
 ## 消息频道

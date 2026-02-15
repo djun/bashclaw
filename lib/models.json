@@ -133,26 +133,24 @@
       "supports_images": false,
       "supports_thinking": true
     },
-    "glm-4.7-flash": {
+    "glm-5": {
+      "provider": "zhipu",
+      "max_tokens": 4096,
+      "context_window": 128000,
+      "supports_images": true,
+      "supports_thinking": true
+    },
+    "glm-4-flash": {
       "provider": "zhipu",
       "max_tokens": 4096,
       "context_window": 128000,
       "supports_images": false,
-      "supports_thinking": false,
-      "free": true
+      "supports_thinking": false
     },
-    "glm-4.5-flash": {
-      "provider": "zhipu",
-      "max_tokens": 4096,
-      "context_window": 128000,
-      "supports_images": false,
-      "supports_thinking": false,
-      "free": true
-    },
-    "glm-4.7": {
-      "provider": "zhipu",
-      "max_tokens": 4096,
-      "context_window": 128000,
+    "kimi-2.5": {
+      "provider": "moonshot",
+      "max_tokens": 8192,
+      "context_window": 256000,
       "supports_images": false,
       "supports_thinking": true
     },
@@ -163,14 +161,7 @@
       "supports_images": false,
       "supports_thinking": false
     },
-    "kimi-k2.5": {
-      "provider": "moonshot",
-      "max_tokens": 8192,
-      "context_window": 256000,
-      "supports_images": false,
-      "supports_thinking": true
-    },
-    "MiniMax-M2.5": {
+    "minimax-2.5": {
       "provider": "minimax",
       "max_tokens": 8192,
       "context_window": 128000,
@@ -183,7 +174,6 @@
     "smart": "claude-opus-4-20250918",
     "balanced": "claude-sonnet-4-20250514",
     "cheap": "gpt-4o-mini",
-    "free": "glm-4.7-flash",
     "claude": "claude-sonnet-4-20250514",
     "gpt": "gpt-4o",
     "gemini": "gemini-2.0-flash",
@@ -193,9 +183,9 @@
     "flash": "gemini-2.0-flash",
     "deepseek": "deepseek-chat",
     "qwen": "qwen-max",
-    "glm": "glm-4.7-flash",
-    "kimi": "kimi-k2.5",
-    "minimax": "MiniMax-M2.5"
+    "glm": "glm-5",
+    "kimi": "kimi-2.5",
+    "minimax": "minimax-2.5"
   },
   "providers": {
     "anthropic": {

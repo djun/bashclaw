@@ -129,7 +129,7 @@ agent_resolve_provider() {
     qwen-*|qwq-*)           printf 'qwen'; return ;;
     glm-*)                   printf 'zhipu'; return ;;
     moonshot-*|kimi-*)       printf 'moonshot'; return ;;
-    MiniMax-*|abab*)         printf 'minimax'; return ;;
+    MiniMax-*|minimax-*|abab*)  printf 'minimax'; return ;;
   esac
 
   # If OPENROUTER_API_KEY is set and model is unknown, assume openrouter

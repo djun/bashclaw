@@ -96,7 +96,7 @@ boot_run() {
         ;;
       agent|message)
         log_info "Boot: sending agent message block $((i + 1))/$count"
-        agent_run "main" "$block_content" "boot" "boot" >/dev/null 2>&1 || {
+        engine_run "main" "$block_content" "boot" "boot" >/dev/null 2>&1 || {
           log_error "Boot: agent block $((i + 1)) failed"
           errors=$((errors + 1))
         }

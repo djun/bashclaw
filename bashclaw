@@ -60,6 +60,8 @@ Commands:
   status            Show system status
   doctor            Run diagnostics
   selftest          Run unit tests
+  tool              Invoke a BashClaw tool directly
+  mcp-serve         Run as MCP server (stdio)
   update            Update bashclaw to latest version
   completion        Generate shell completion scripts
   version           Show version info
@@ -168,7 +170,7 @@ _bashclaw() {
   COMPREPLY=()
   cur="${COMP_WORDS[COMP_CWORD]}"
   prev="${COMP_WORDS[COMP_CWORD-1]}"
-  commands="agent gateway daemon message config session memory cron hooks boot security onboard status doctor update completion version help"
+  commands="agent gateway daemon message config session memory cron hooks boot security onboard status doctor tool mcp-serve update completion version help"
 
   case "$prev" in
     bashclaw)
@@ -237,6 +239,8 @@ _bashclaw() {
     'onboard:Interactive setup wizard'
     'status:Show system status'
     'doctor:Run diagnostics'
+    'tool:Invoke a BashClaw tool directly'
+    'mcp-serve:Run as MCP server (stdio)'
     'update:Update bashclaw'
     'completion:Generate shell completions'
     'version:Show version info'
@@ -620,9 +624,116 @@ cmd_selftest() {
   bash "$test_script" --unit "$@"
 }
 
+# Direct tool invocation CLI - allows agent CLIs to call BashClaw tools via Bash tool.
+# Supports both flag-style and raw JSON input:
+#   bashclaw tool memory --action get --key notes
+#   bashclaw tool memory '{"action":"get","key":"notes"}'
+cmd_tool() {
+  local tool_name="${1:-}"
+  shift || true
+
+  if [[ -z "$tool_name" ]]; then
+    printf 'Usage: bashclaw tool <tool_name> [--param value ...]\n\n'
+    printf 'Examples:\n'
+    printf '  bashclaw tool memory --action get --key notes\n'
+    printf '  bashclaw tool memory --action set --key notes --value "hello world"\n'
+    printf '  bashclaw tool cron --action list\n'
+    printf '  bashclaw tool spawn --task "research topic" --label research\n\n'
+    printf 'Available tools:\n'
+    local t
+    for t in $(_tool_list); do
+      printf '  %s\n' "$t"
+    done
+    return 1
+  fi
+
+  # Validate tool exists
+  local handler
+  handler="$(_tool_handler "$tool_name")"
+  if [[ -z "$handler" ]]; then
+    printf '{"error":"unknown tool: %s"}\n' "$tool_name" >&2
+    return 1
+  fi
+
+  # Load config if available
+  local cfg_file
+  cfg_file="$(config_path 2>/dev/null)"
+  if [[ -f "$cfg_file" ]]; then
+    _CONFIG_CACHE=""
+    config_load 2>/dev/null || true
+  fi
+
+  # Build tool_input: if first arg starts with '{', treat as raw JSON; otherwise parse --key value flags
+  local tool_input="{}"
+  if [[ $# -gt 0 ]]; then
+    if [[ "${1:0:1}" == "{" ]]; then
+      tool_input="$1"
+    else
+      tool_input="$(_tool_parse_flags "$@")"
+    fi
+  fi
+
+  tool_execute "$tool_name" "$tool_input"
+}
+
+# Parse --key value pairs into JSON object
+_tool_parse_flags() {
+  local json_parts=()
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --*)
+        local key="${1#--}"
+        if [[ $# -lt 2 ]]; then
+          # Flag with no value, treat as true
+          json_parts+=("$(printf '"%s":true' "$key")")
+          shift
+        else
+          local val="$2"
+          # Auto-detect type: number, boolean, or string
+          if [[ "$val" =~ ^-?[0-9]+$ ]]; then
+            json_parts+=("$(printf '"%s":%s' "$key" "$val")")
+          elif [[ "$val" == "true" || "$val" == "false" ]]; then
+            json_parts+=("$(printf '"%s":%s' "$key" "$val")")
+          else
+            local escaped
+            escaped="$(printf '%s' "$val" | jq -Rs '.' 2>/dev/null)" || escaped="\"$val\""
+            json_parts+=("$(printf '"%s":%s' "$key" "$escaped")")
+          fi
+          shift 2
+        fi
+        ;;
+      *)
+        shift
+        ;;
+    esac
+  done
+
+  local IFS=','
+  printf '{%s}' "${json_parts[*]}"
+}
+
+# MCP server mode - exposes all BashClaw tools as MCP server via stdio
+# Usage: bashclaw mcp-serve
+cmd_mcp_serve() {
+  local mcp_server="${BASHCLAW_ROOT}/mcp/server.sh"
+  if [[ ! -f "$mcp_server" ]]; then
+    log_error "MCP server not found: $mcp_server"
+    return 1
+  fi
+
+  # Load config
+  local cfg_file
+  cfg_file="$(config_path 2>/dev/null)"
+  if [[ -f "$cfg_file" ]]; then
+    export BASHCLAW_CONFIG="$cfg_file"
+  fi
+
+  exec bash "$mcp_server"
+}
+
 _suggest_command() {
   local input="$1"
-  local known_cmds="agent message msg config cfg session sess memory mem doctor gateway daemon cron hook security sec plugin skill onboard setup status selftest version help update"
+  local known_cmds="agent message msg config cfg session sess memory mem doctor gateway daemon cron hook security sec plugin skill onboard setup status selftest tool mcp-serve version help update"
   local best_match=""
 
   if [[ "${#input}" -lt 2 ]]; then
@@ -724,6 +835,12 @@ main() {
       ;;
     selftest)
       cmd_selftest "$@"
+      ;;
+    tool)
+      cmd_tool "$@"
+      ;;
+    mcp-serve)
+      cmd_mcp_serve
       ;;
     update)
       cmd_update

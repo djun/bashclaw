@@ -2,7 +2,7 @@
   "providers": {
     "anthropic": {
       "api": "anthropic",
-      "base_url": "https://api.anthropic.com",
+      "base_url": "https://api.anthropic.com/v1",
       "api_key_env": "ANTHROPIC_API_KEY",
       "api_version": "2023-06-01",
       "models": [
@@ -55,7 +55,7 @@
     },
     "openai": {
       "api": "openai",
-      "base_url": "https://api.openai.com",
+      "base_url": "https://api.openai.com/v1",
       "api_key_env": "OPENAI_API_KEY",
       "models": [
         {
@@ -124,7 +124,7 @@
     },
     "google": {
       "api": "google",
-      "base_url": "https://generativelanguage.googleapis.com",
+      "base_url": "https://generativelanguage.googleapis.com/v1beta",
       "api_key_env": "GEMINI_API_KEY",
       "models": [
         {
@@ -176,7 +176,7 @@
     },
     "deepseek": {
       "api": "openai",
-      "base_url": "https://api.deepseek.com",
+      "base_url": "https://api.deepseek.com/v1",
       "api_key_env": "DEEPSEEK_API_KEY",
       "models": [
         {
@@ -213,7 +213,7 @@
     },
     "qwen": {
       "api": "openai",
-      "base_url": "https://dashscope.aliyuncs.com/compatible-mode",
+      "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
       "api_key_env": "QWEN_API_KEY",
       "models": [
         {
@@ -267,7 +267,7 @@
     "zhipu": {
       "api": "openai",
       "base_url": "https://open.bigmodel.cn/api/paas/v4",
-      "api_key_env": "ZAI_API_KEY",
+      "api_key_env": "ZHIPU_API_KEY",
       "models": [
         {
           "id": "glm-5",
@@ -326,7 +326,7 @@
     },
     "minimax": {
       "api": "openai",
-      "base_url": "https://api.minimax.chat",
+      "base_url": "https://api.minimax.chat/v1",
       "api_key_env": "MINIMAX_API_KEY",
       "models": [
         {
@@ -363,7 +363,7 @@
     },
     "xiaomi": {
       "api": "anthropic",
-      "base_url": "https://api.xiaomimimo.com/anthropic",
+      "base_url": "https://api.xiaomimimo.com/anthropic/v1",
       "api_key_env": "XIAOMI_API_KEY",
       "models": [
         {
@@ -444,7 +444,7 @@
     },
     "groq": {
       "api": "openai",
-      "base_url": "https://api.groq.com/openai",
+      "base_url": "https://api.groq.com/openai/v1",
       "api_key_env": "GROQ_API_KEY",
       "models": [
         {
@@ -466,7 +466,7 @@
     },
     "xai": {
       "api": "openai",
-      "base_url": "https://api.x.ai",
+      "base_url": "https://api.x.ai/v1",
       "api_key_env": "XAI_API_KEY",
       "models": [
         {
@@ -488,7 +488,7 @@
     },
     "mistral": {
       "api": "openai",
-      "base_url": "https://api.mistral.ai",
+      "base_url": "https://api.mistral.ai/v1",
       "api_key_env": "MISTRAL_API_KEY",
       "models": [
         {
@@ -510,25 +510,25 @@
     },
     "together": {
       "api": "openai",
-      "base_url": "https://api.together.xyz",
+      "base_url": "https://api.together.xyz/v1",
       "api_key_env": "TOGETHER_API_KEY",
       "models": []
     },
     "openrouter": {
       "api": "openai",
-      "base_url": "https://openrouter.ai/api",
+      "base_url": "https://openrouter.ai/api/v1",
       "api_key_env": "OPENROUTER_API_KEY",
       "models": []
     },
     "ollama": {
       "api": "openai",
-      "base_url": "http://localhost:11434",
+      "base_url": "http://localhost:11434/v1",
       "api_key_env": "OLLAMA_API_KEY",
       "models": []
     },
     "vllm": {
       "api": "openai",
-      "base_url": "http://127.0.0.1:8000",
+      "base_url": "http://127.0.0.1:8000/v1",
       "api_key_env": "VLLM_API_KEY",
       "models": []
     }

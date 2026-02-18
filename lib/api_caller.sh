@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# API calling functions with shared retry logic for all providers
+# API calling functions: 3 endpoint implementations (anthropic, openai, google)
+# All responses normalized to Anthropic message format as internal protocol.
 
 # ---- Shared Retry Logic ----
 
@@ -39,7 +40,6 @@ _api_call_with_retry() {
   return 1
 }
 
-# Write headers to a temp file for use with curl -H @file
 _api_write_headers() {
   local headers_file="$1"
   shift
@@ -50,7 +50,6 @@ _api_write_headers() {
   done
 }
 
-# Common post-call error checking and response handling
 _api_check_response() {
   local response="$1"
   local http_code="$2"
@@ -73,7 +72,35 @@ _api_check_response() {
   return 0
 }
 
+# ---- Unified API Dispatch ----
+
+# Unified entry point: resolves provider/format and dispatches to the correct caller.
+# All callers return Anthropic-format response: {stop_reason, content: [{type, text}], usage}
+agent_call_api() {
+  local model="$1"
+  local system_prompt="$2"
+  local messages="$3"
+  local max_tokens="${4:-4096}"
+  local temperature="${5:-$AGENT_DEFAULT_TEMPERATURE}"
+  local tools_json="${6:-}"
+
+  local provider
+  provider="$(agent_resolve_provider "$model")"
+  provider="$(_provider_with_proxy_fallback "$provider")"
+
+  local api_format
+  api_format="$(_provider_api_format "$provider")"
+
+  case "$api_format" in
+    anthropic) agent_call_anthropic "$model" "$system_prompt" "$messages" "$max_tokens" "$temperature" "$tools_json" ;;
+    openai)    agent_call_openai "$model" "$system_prompt" "$messages" "$max_tokens" "$temperature" "$tools_json" ;;
+    google)    agent_call_google "$model" "$system_prompt" "$messages" "$max_tokens" "$temperature" "$tools_json" ;;
+    *)         log_error "Unsupported API format: $api_format (provider=$provider)"; return 1 ;;
+  esac
+}
+
 # ---- Anthropic API ----
+# Handles: anthropic, xiaomi, and any provider with api="anthropic"
 
 agent_call_anthropic() {
   local model="$1"
@@ -86,10 +113,26 @@ agent_call_anthropic() {
   require_command curl "agent_call_anthropic requires curl"
   require_command jq "agent_call_anthropic requires jq"
 
-  local api_key
-  api_key="$(agent_resolve_api_key "anthropic")"
+  local provider
+  provider="$(agent_resolve_provider "$model")"
+  provider="$(_provider_with_proxy_fallback "$provider")"
 
-  local api_url="${ANTHROPIC_BASE_URL:-https://api.anthropic.com}/v1/messages"
+  local api_base
+  api_base="$(_provider_api_url "$provider")"
+  if [[ -z "$api_base" ]]; then
+    api_base="https://api.anthropic.com/v1"
+  fi
+
+  local api_key
+  api_key="$(agent_resolve_api_key "$provider")"
+
+  local api_version
+  api_version="$(_provider_api_version "$provider")"
+  if [[ -z "$api_version" ]]; then
+    api_version="2023-06-01"
+  fi
+
+  local api_url="${api_base}/messages"
 
   local body
   if [[ -n "$tools_json" && "$tools_json" != "[]" ]]; then
@@ -124,7 +167,7 @@ agent_call_anthropic() {
       }')"
   fi
 
-  log_debug "Anthropic API call: model=$model url=$api_url"
+  log_debug "Anthropic API call: model=$model provider=$provider url=$api_url"
 
   local response_file headers_file
   response_file="$(tmpfile "anthropic_resp")"
@@ -132,7 +175,7 @@ agent_call_anthropic() {
 
   _api_write_headers "$headers_file" \
     "x-api-key: ${api_key}" \
-    "anthropic-version: 2023-06-01" \
+    "anthropic-version: ${api_version}" \
     "content-type: application/json"
 
   local http_code
@@ -150,6 +193,8 @@ agent_call_anthropic() {
 }
 
 # ---- OpenAI-compatible API ----
+# Handles: openai, deepseek, qwen, zhipu, moonshot, minimax, groq, xai, mistral,
+# nvidia, together, openrouter, ollama, vllm, qianfan, and any provider with api="openai"
 
 agent_call_openai() {
   local model="$1"
@@ -165,15 +210,17 @@ agent_call_openai() {
   local provider
   provider="$(agent_resolve_provider "$model")"
   provider="$(_provider_with_proxy_fallback "$provider")"
+
   local api_base
   api_base="$(_provider_api_url "$provider")"
   if [[ -z "$api_base" ]]; then
-    api_base="${OPENAI_BASE_URL:-https://api.openai.com}"
+    api_base="https://api.openai.com/v1"
   fi
+
   local api_key
   api_key="$(agent_resolve_api_key "$provider")"
 
-  local api_url="${api_base}/v1/chat/completions"
+  local api_url="${api_base}/chat/completions"
 
   local max_tokens_field="max_tokens"
   local compat_field
@@ -229,7 +276,7 @@ agent_call_openai() {
       }')"
   fi
 
-  log_debug "OpenAI API call: model=$model"
+  log_debug "OpenAI API call: model=$model provider=$provider url=$api_url"
 
   local response_file headers_file
   response_file="$(tmpfile "openai_resp")"
@@ -253,6 +300,7 @@ agent_call_openai() {
   _openai_normalize_response "$response"
 }
 
+# Normalize OpenAI response to Anthropic internal format
 _openai_normalize_response() {
   local response="$1"
 
@@ -305,6 +353,7 @@ _openai_normalize_response() {
 }
 
 # ---- Google Gemini API ----
+# Handles: google, and any provider with api="google"
 
 agent_call_google() {
   local model="$1"
@@ -317,10 +366,19 @@ agent_call_google() {
   require_command curl "agent_call_google requires curl"
   require_command jq "agent_call_google requires jq"
 
-  local api_key
-  api_key="$(agent_resolve_api_key "google")"
+  local provider
+  provider="$(agent_resolve_provider "$model")"
 
-  local api_url="${GOOGLE_AI_BASE_URL:-https://generativelanguage.googleapis.com}/v1beta/models/${model}:generateContent?key=${api_key}"
+  local api_base
+  api_base="$(_provider_api_url "$provider")"
+  if [[ -z "$api_base" ]]; then
+    api_base="https://generativelanguage.googleapis.com/v1beta"
+  fi
+
+  local api_key
+  api_key="$(agent_resolve_api_key "$provider")"
+
+  local api_url="${api_base}/models/${model}:generateContent?key=${api_key}"
 
   local gemini_contents
   gemini_contents="$(printf '%s' "$messages" | jq '[
@@ -372,7 +430,7 @@ agent_call_google() {
       }')"
   fi
 
-  log_debug "Google API call: model=$model"
+  log_debug "Google API call: model=$model provider=$provider url=$api_url"
 
   local response_file headers_file
   response_file="$(tmpfile "google_resp")"
@@ -395,6 +453,7 @@ agent_call_google() {
   _google_normalize_response "$response"
 }
 
+# Normalize Google Gemini response to Anthropic internal format
 _google_normalize_response() {
   local response="$1"
 
@@ -449,92 +508,4 @@ _google_normalize_response() {
       }
     }'
   fi
-}
-
-# ---- OpenRouter API (OpenAI-compatible) ----
-
-agent_call_openrouter() {
-  local model="$1"
-  local system_prompt="$2"
-  local messages="$3"
-  local max_tokens="${4:-4096}"
-  local temperature="${5:-$AGENT_DEFAULT_TEMPERATURE}"
-  local tools_json="${6:-}"
-
-  require_command curl "agent_call_openrouter requires curl"
-  require_command jq "agent_call_openrouter requires jq"
-
-  local api_key
-  api_key="$(agent_resolve_api_key "openrouter")"
-
-  local api_url="${OPENROUTER_BASE_URL:-https://openrouter.ai/api}/v1/chat/completions"
-
-  local oai_messages
-  oai_messages="$(printf '%s' "$messages" | jq --arg sys "$system_prompt" \
-    '[{role: "system", content: $sys}] + .')"
-
-  local oai_tools=""
-  if [[ -n "$tools_json" && "$tools_json" != "[]" ]]; then
-    oai_tools="$(printf '%s' "$tools_json" | jq '[.[] | {
-      type: "function",
-      function: {
-        name: .name,
-        description: .description,
-        parameters: .input_schema
-      }
-    }]')"
-  fi
-
-  local body
-  if [[ -n "$oai_tools" && "$oai_tools" != "[]" ]]; then
-    body="$(jq -nc \
-      --arg model "$model" \
-      --argjson messages "$oai_messages" \
-      --argjson max_tokens "$max_tokens" \
-      --argjson temp "$temperature" \
-      --argjson tools "$oai_tools" \
-      '{
-        model: $model,
-        messages: $messages,
-        max_tokens: $max_tokens,
-        temperature: $temp,
-        tools: $tools
-      }')"
-  else
-    body="$(jq -nc \
-      --arg model "$model" \
-      --argjson messages "$oai_messages" \
-      --argjson max_tokens "$max_tokens" \
-      --argjson temp "$temperature" \
-      '{
-        model: $model,
-        messages: $messages,
-        max_tokens: $max_tokens,
-        temperature: $temp
-      }')"
-  fi
-
-  log_debug "OpenRouter API call: model=$model"
-
-  local response_file headers_file
-  response_file="$(tmpfile "openrouter_resp")"
-  headers_file="$(tmpfile "openrouter_headers")"
-
-  _api_write_headers "$headers_file" \
-    "Authorization: Bearer ${api_key}" \
-    "Content-Type: application/json" \
-    "HTTP-Referer: https://github.com/bashclaw/bashclaw"
-
-  local http_code
-  http_code="$(_api_call_with_retry 3 "$api_url" "$headers_file" "$body" "$response_file" "OpenRouter")" || true
-  local response
-  response="$(cat "$response_file" 2>/dev/null)"
-
-  rm -f "$response_file" "$headers_file"
-
-  if ! _api_check_response "$response" "$http_code" "OpenRouter"; then
-    return 1
-  fi
-
-  _openai_normalize_response "$response"
 }

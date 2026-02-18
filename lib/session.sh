@@ -743,26 +743,8 @@ session_compact() {
   ')"
 
   # Call the API for summarization using the provider abstraction
-  local provider
-  provider="$(agent_resolve_provider "$model")"
   local summary_response
-  local api_format
-  api_format="$(_provider_api_format "$provider")"
-  case "$api_format" in
-    anthropic)
-      summary_response="$(agent_call_anthropic "$model" "You are a conversation summarizer." "$compact_messages" 2048 0.3 "" 2>/dev/null)" || true
-      ;;
-    openai)
-      summary_response="$(agent_call_openai "$model" "You are a conversation summarizer." "$compact_messages" 2048 0.3 "" 2>/dev/null)" || true
-      ;;
-    google)
-      summary_response="$(agent_call_google "$model" "You are a conversation summarizer." "$compact_messages" 2048 0.3 "" 2>/dev/null)" || true
-      ;;
-    *)
-      log_error "Unsupported API format for compaction: $api_format (provider=$provider)"
-      return 1
-      ;;
-  esac
+  summary_response="$(agent_call_api "$model" "You are a conversation summarizer." "$compact_messages" 2048 0.3 "" 2>/dev/null)" || true
 
   local summary_text
   summary_text="$(printf '%s' "$summary_response" | jq -r '

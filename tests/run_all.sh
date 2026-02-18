@@ -134,6 +134,7 @@ else
     "${SCRIPT_DIR}/test_skills.sh"
     "${SCRIPT_DIR}/test_dedup.sh"
     "${SCRIPT_DIR}/test_engine.sh"
+    "${SCRIPT_DIR}/test_mcp_server.sh"
     "${SCRIPT_DIR}/test_gateway.sh"
     "${SCRIPT_DIR}/test_workspace_session_spawn.sh"
   )

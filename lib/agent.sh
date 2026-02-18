@@ -184,10 +184,8 @@ agent_run_memory_flush() {
 
   session_append "$session_file" "user" "$flush_prompt"
 
-  local model provider max_tokens
+  local model max_tokens
   model="$(agent_resolve_model "$agent_id")"
-  provider="$(agent_resolve_provider "$model")"
-  provider="$(_provider_with_proxy_fallback "$provider")"
   max_tokens="$(_model_max_tokens "$model")"
 
   local max_history
@@ -198,23 +196,7 @@ agent_run_memory_flush() {
   tools_json="$(agent_build_tools_spec "$agent_id")"
 
   local response
-  local api_format
-  api_format="$(_provider_api_format "$provider")"
-  case "$api_format" in
-    anthropic)
-      response="$(agent_call_anthropic "$model" "$flush_system" "$messages" "$max_tokens" "$AGENT_DEFAULT_TEMPERATURE" "$tools_json" 2>/dev/null)" || true
-      ;;
-    openai)
-      response="$(agent_call_openai "$model" "$flush_system" "$messages" "$max_tokens" "$AGENT_DEFAULT_TEMPERATURE" "$tools_json" 2>/dev/null)" || true
-      ;;
-    google)
-      response="$(agent_call_google "$model" "$flush_system" "$messages" "$max_tokens" "$AGENT_DEFAULT_TEMPERATURE" "$tools_json" 2>/dev/null)" || true
-      ;;
-    *)
-      log_warn "Memory flush: unsupported api format $api_format (provider=$provider)"
-      return 1
-      ;;
-  esac
+  response="$(agent_call_api "$model" "$flush_system" "$messages" "$max_tokens" "$AGENT_DEFAULT_TEMPERATURE" "$tools_json" 2>/dev/null)" || true
 
   local text_content
   text_content="$(printf '%s' "$response" | jq -r '
@@ -308,10 +290,10 @@ agent_run() {
   require_command jq "agent_run requires jq"
   require_command curl "agent_run requires curl"
 
-  local model provider
+  local model
   model="$(agent_resolve_model "$agent_id")"
+  local provider
   provider="$(agent_resolve_provider "$model")"
-  provider="$(_provider_with_proxy_fallback "$provider")"
   log_info "Agent run: agent=$agent_id model=$model provider=$provider"
 
   local max_tokens
@@ -343,7 +325,6 @@ agent_run() {
   local final_text=""
   local compaction_retries=0
   local current_model="$model"
-  local current_provider="$provider"
 
   while [ "$iteration" -lt "$AGENT_MAX_TOOL_ITERATIONS" ]; do
     iteration=$((iteration + 1))
@@ -370,24 +351,7 @@ agent_run() {
 
     local response
     local api_call_failed="false"
-    local api_format
-    api_format="$(_provider_api_format "$current_provider")"
-    case "$api_format" in
-      anthropic)
-        response="$(agent_call_anthropic "$current_model" "$system_prompt" "$messages" "$max_tokens" "$AGENT_DEFAULT_TEMPERATURE" "$tools_json" 2>&1)" || api_call_failed="true"
-        ;;
-      openai)
-        response="$(agent_call_openai "$current_model" "$system_prompt" "$messages" "$max_tokens" "$AGENT_DEFAULT_TEMPERATURE" "$tools_json" 2>&1)" || api_call_failed="true"
-        ;;
-      google)
-        response="$(agent_call_google "$current_model" "$system_prompt" "$messages" "$max_tokens" "$AGENT_DEFAULT_TEMPERATURE" "$tools_json" 2>&1)" || api_call_failed="true"
-        ;;
-      *)
-        log_error "Unsupported API format: $api_format (provider=$current_provider)"
-        printf '{"error": "unsupported provider: %s"}' "$current_provider"
-        return 1
-        ;;
-    esac
+    response="$(agent_call_api "$current_model" "$system_prompt" "$messages" "$max_tokens" "$AGENT_DEFAULT_TEMPERATURE" "$tools_json")" || api_call_failed="true"
 
     if [[ "$api_call_failed" == "true" ]] && session_detect_overflow "$response"; then
       log_warn "Context overflow detected (compaction_retries=$compaction_retries)"
@@ -416,8 +380,6 @@ agent_run() {
       if [[ -n "$fallback" ]]; then
         log_info "Falling back from $current_model to $fallback"
         current_model="$fallback"
-        current_provider="$(agent_resolve_provider "$current_model")"
-        current_provider="$(_provider_with_proxy_fallback "$current_provider")"
         max_tokens="$(_model_max_tokens "$current_model")"
         compaction_retries=0
         iteration=$((iteration - 1))

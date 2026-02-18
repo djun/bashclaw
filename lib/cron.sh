@@ -330,7 +330,7 @@ cron_run_isolated() {
 
   # Run with timeout in a subshell
   (
-    agent_run "$agent_id" "$prompt" "cron" "$session_sender" > "$result_file" 2>&1
+    engine_run "$agent_id" "$prompt" "cron" "$session_sender" > "$result_file" 2>&1
   ) &
   local pid=$!
 

@@ -326,7 +326,7 @@ gateway_cron_runner() {
       if cron_matches_now "$schedule"; then
         log_info "Cron job triggered: id=$job_id schedule=$schedule"
         (
-          agent_run "$agent_id" "$command" "cron" "cron:${job_id}"
+          engine_run "$agent_id" "$command" "cron" "cron:${job_id}"
         ) &
       fi
     done

@@ -1,8 +1,15 @@
 #!/usr/bin/env bash
 # Claude Code CLI engine for bashclaw
-# Delegates agent execution to the Claude Code CLI (claude -p --output-format stream-json)
+# Delegates agent execution to Claude Code CLI (claude -p --output-format json).
+# BashClaw-specific tools are accessed via `bashclaw tool <name> '<json>'` through
+# Claude CLI's native Bash tool -- no MCP server needed.
 
 ENGINE_CLAUDE_TIMEOUT="${ENGINE_CLAUDE_TIMEOUT:-300}"
+
+# BashClaw tools that map to Claude CLI native tools (no bridge needed)
+_ENGINE_CLAUDE_NATIVE_TOOLS="web_fetch web_search shell read_file write_file list_files file_search"
+# BashClaw tools accessed via `bashclaw tool` CLI
+_ENGINE_CLAUDE_BRIDGE_TOOLS="memory cron message agents_list session_status sessions_list agent_message spawn spawn_status"
 
 engine_claude_available() {
   is_command_available claude
@@ -16,10 +23,46 @@ engine_claude_version() {
   fi
 }
 
-# Read Claude Code session_id from BashClaw session metadata
 engine_claude_session_id() {
   local session_file="$1"
   session_meta_get "$session_file" "cc_session_id" ""
+}
+
+# Resolve bashclaw binary path for tool invocation
+_engine_claude_bashclaw_bin() {
+  local script_dir
+  script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+  printf '%s' "${script_dir}/bashclaw"
+}
+
+# Build the context block injected into the user message.
+# This tells Claude CLI how to invoke BashClaw tools via Bash.
+_engine_claude_build_context() {
+  local agent_id="$1"
+  local channel="$2"
+  local bashclaw_bin="$3"
+
+  local system_prompt
+  system_prompt="$(agent_build_system_prompt "$agent_id" "false" "$channel" "claude")"
+
+  cat <<CTXEOF
+<bashclaw-context>
+${system_prompt}
+
+To use BashClaw tools, call them via the Bash tool:
+  ${bashclaw_bin} tool <tool_name> --param1 value1 --param2 value2
+
+Examples:
+  ${bashclaw_bin} tool memory --action get --key user_notes
+  ${bashclaw_bin} tool memory --action set --key todo --value "finish the report"
+  ${bashclaw_bin} tool cron --action list
+  ${bashclaw_bin} tool agent_message --target_agent helper --message "please review"
+  ${bashclaw_bin} tool spawn --task "research topic X" --label research
+  ${bashclaw_bin} tool spawn_status --task_id abc123
+
+Output is JSON. Check the exit code for errors.
+</bashclaw-context>
+CTXEOF
 }
 
 # Core Claude Code CLI execution
@@ -37,6 +80,11 @@ engine_claude_run() {
 
   require_command jq "engine_claude_run requires jq"
 
+  # Fire pre-execution hook
+  if declare -f hooks_run &>/dev/null; then
+    hooks_run "before_agent_start" "{\"agent_id\":\"$agent_id\",\"engine\":\"claude\",\"channel\":\"$channel\"}" 2>/dev/null || true
+  fi
+
   # Resolve session file
   local sess_file
   sess_file="$(session_file "$agent_id" "$channel" "$sender")"
@@ -45,11 +93,11 @@ engine_claude_run() {
   # Append user message to BashClaw session for history tracking
   session_append "$sess_file" "user" "$message"
 
-  # Resolve model and max_turns from agent config
+  # Resolve model
   local model
-  model="$(config_agent_get "$agent_id" "model" "")"
+  model="$(config_agent_get "$agent_id" "engineModel" "")"
   if [[ -z "$model" ]]; then
-    model="${MODEL_ID:-claude-opus-4-6}"
+    model="${ENGINE_CLAUDE_MODEL:-}"
   fi
 
   local max_turns
@@ -57,23 +105,37 @@ engine_claude_run() {
 
   # Build CLI arguments
   local args=()
-  args+=(--output-format stream-json)
-  args+=(--model "$model")
+  args+=(--output-format json)
+  if [[ -n "$model" ]]; then
+    args+=(--model "$model")
+  fi
   args+=(--max-turns "$max_turns")
 
-  # Resume existing Claude Code session if available
+  # Fallback model
+  local fallback_model
+  fallback_model="$(config_agent_get "$agent_id" "fallbackModel" "")"
+  if [[ -n "$fallback_model" ]]; then
+    args+=(--fallback-model "$fallback_model")
+  fi
+
+  # Resume existing session
   local cc_session_id
   cc_session_id="$(engine_claude_session_id "$sess_file")"
   if [[ -n "$cc_session_id" ]]; then
     args+=(--resume "$cc_session_id")
   fi
 
-  # System prompt
-  local system_prompt
-  system_prompt="$(agent_build_system_prompt "$agent_id" "false" "$channel")"
-  if [[ -n "$system_prompt" ]]; then
-    args+=(--append-system-prompt "$system_prompt")
-  fi
+  # Prevent CLAUDE.md recursion (myclaude pattern)
+  args+=(--setting-sources "")
+
+  # Build context-injected message instead of --append-system-prompt
+  local bashclaw_bin
+  bashclaw_bin="$(_engine_claude_bashclaw_bin)"
+  local context
+  context="$(_engine_claude_build_context "$agent_id" "$channel" "$bashclaw_bin")"
+  local full_message="${context}
+
+${message}"
 
   # Allowed tools from agent config
   local tools_config
@@ -86,82 +148,79 @@ engine_claude_run() {
     done < <(printf '%s' "$tools_config" | jq -r '.[]' 2>/dev/null)
   fi
 
-  log_info "engine_claude: model=$model agent=$agent_id session=${cc_session_id:-new}"
+  log_info "engine_claude: model=${model:-default} agent=$agent_id session=${cc_session_id:-new}"
+  log_debug "engine_claude: claude -p <message> ${args[*]}"
 
-  # Execute claude CLI and capture NDJSON output
-  local response_file
+  # Execute claude CLI
+  local response_file error_file
   response_file="$(tmpfile "claude_engine")"
+  error_file="$(tmpfile "claude_engine_err")"
 
-  claude -p "$message" "${args[@]}" 2>/dev/null > "$response_file" &
+  (export BASHCLAW_STATE_DIR BASHCLAW_CONFIG LOG_LEVEL
+   claude -p "$full_message" "${args[@]}" > "$response_file" 2>"$error_file") &
   local claude_pid=$!
 
-  # Wait with absolute timeout
+  # Wait with timeout
   local waited=0
   while kill -0 "$claude_pid" 2>/dev/null; do
     if (( waited >= ENGINE_CLAUDE_TIMEOUT )); then
       kill "$claude_pid" 2>/dev/null || true
-      log_warn "Claude CLI timed out after ${ENGINE_CLAUDE_TIMEOUT}s"
-      break
+      log_error "Claude CLI timed out after ${ENGINE_CLAUDE_TIMEOUT}s"
+      rm -f "$response_file" "$error_file"
+      return 1
     fi
     sleep 1
     waited=$((waited + 1))
   done
-  wait "$claude_pid" 2>/dev/null || true
 
-  # Parse NDJSON output
-  local final_text=""
-  local new_session_id=""
-  local total_cost=""
-  local num_turns=""
+  local exit_code=0
+  wait "$claude_pid" 2>/dev/null || exit_code=$?
 
-  while IFS= read -r line; do
-    [[ -z "$line" ]] && continue
+  if [[ -s "$error_file" ]]; then
+    local err_content
+    err_content="$(cat "$error_file" 2>/dev/null)"
+    log_warn "Claude CLI stderr: ${err_content:0:500}"
+  fi
+  rm -f "$error_file"
 
-    local msg_type
-    msg_type="$(printf '%s' "$line" | jq -r '.type // empty' 2>/dev/null)"
-
-    case "$msg_type" in
-      system)
-        local sid
-        sid="$(printf '%s' "$line" | jq -r '.session_id // empty' 2>/dev/null)"
-        if [[ -n "$sid" ]]; then
-          new_session_id="$sid"
-        fi
-        ;;
-      assistant)
-        local text
-        text="$(printf '%s' "$line" | jq -r '
-          [.message.content[]? | select(.type == "text") | .text] | join("")
-        ' 2>/dev/null)"
-        if [[ -n "$text" ]]; then
-          final_text="$text"
-        fi
-        ;;
-      result)
-        local rtext
-        rtext="$(printf '%s' "$line" | jq -r '.result // empty' 2>/dev/null)"
-        if [[ -n "$rtext" ]]; then
-          final_text="$rtext"
-        fi
-        total_cost="$(printf '%s' "$line" | jq -r '.total_cost_usd // empty' 2>/dev/null)"
-        num_turns="$(printf '%s' "$line" | jq -r '.num_turns // empty' 2>/dev/null)"
-        ;;
-    esac
-  done < "$response_file"
-
+  # Parse JSON result
+  local response
+  response="$(cat "$response_file" 2>/dev/null)"
   rm -f "$response_file"
 
-  # Persist Claude Code session_id for future --resume
+  if [[ -z "$response" ]]; then
+    log_error "Claude CLI returned empty output (exit=$exit_code)"
+    _engine_claude_fire_end_hook "$agent_id" "$channel" "" ""
+    return 1
+  fi
+
+  if ! printf '%s' "$response" | jq empty 2>/dev/null; then
+    log_error "Claude CLI returned invalid JSON"
+    log_debug "Claude CLI raw output: ${response:0:500}"
+    _engine_claude_fire_end_hook "$agent_id" "$channel" "" ""
+    return 1
+  fi
+
+  local final_text="" new_session_id="" total_cost="" num_turns="" is_error=""
+
+  final_text="$(printf '%s' "$response" | jq -r '.result // empty' 2>/dev/null)"
+  new_session_id="$(printf '%s' "$response" | jq -r '.session_id // empty' 2>/dev/null)"
+  total_cost="$(printf '%s' "$response" | jq -r '.total_cost_usd // empty' 2>/dev/null)"
+  num_turns="$(printf '%s' "$response" | jq -r '.num_turns // empty' 2>/dev/null)"
+  is_error="$(printf '%s' "$response" | jq -r '.is_error // false' 2>/dev/null)"
+
+  if [[ "$is_error" == "true" ]]; then
+    log_error "Claude CLI error: ${final_text:0:500}"
+  fi
+
   if [[ -n "$new_session_id" ]]; then
     session_meta_update "$sess_file" "cc_session_id" "\"${new_session_id}\""
   fi
 
-  # Append assistant response to BashClaw session
   if [[ -n "$final_text" ]]; then
     session_append "$sess_file" "assistant" "$final_text"
   fi
 
-  # Track cost metadata
   if [[ -n "$total_cost" ]]; then
     session_meta_update "$sess_file" "cc_total_cost_usd" "\"${total_cost}\""
   fi
@@ -169,5 +228,17 @@ engine_claude_run() {
     session_meta_update "$sess_file" "cc_num_turns" "$num_turns"
   fi
 
+  _engine_claude_fire_end_hook "$agent_id" "$channel" "$total_cost" "$num_turns"
+
   printf '%s' "$final_text"
+}
+
+_engine_claude_fire_end_hook() {
+  local agent_id="$1"
+  local channel="$2"
+  local cost="${3:-0}"
+  local turns="${4:-0}"
+  if declare -f hooks_run &>/dev/null; then
+    hooks_run "agent_end" "{\"agent_id\":\"$agent_id\",\"engine\":\"claude\",\"channel\":\"$channel\",\"cost\":\"$cost\",\"turns\":\"$turns\"}" 2>/dev/null || true
+  fi
 }

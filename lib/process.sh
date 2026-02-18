@@ -116,7 +116,7 @@ process_worker() {
     (
       _queue_lane_acquire "$agent_id"
       local result
-      result="$(agent_run "$agent_id" "$command" "queue" "queue:${item_id}" 2>&1)" || true
+      result="$(engine_run "$agent_id" "$command" "queue" "queue:${item_id}" 2>&1)" || true
       _queue_lane_release "$agent_id"
       _queue_mark_done "$item_id" "completed" "${result:0:500}"
     ) &

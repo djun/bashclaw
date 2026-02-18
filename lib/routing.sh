@@ -652,7 +652,7 @@ routing_dispatch() {
   fi
 
   local response
-  response="$(agent_run "$agent_id" "$message" "$channel" "$sender")"
+  response="$(engine_run "$agent_id" "$message" "$channel" "$sender")"
 
   if [[ -z "$response" ]]; then
     log_warn "Agent returned empty response"

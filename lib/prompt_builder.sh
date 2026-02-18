@@ -354,7 +354,8 @@ agent_build_system_prompt() {
   local agent_id="${1:-main}"
   local is_subagent="${2:-false}"
   local channel="${3:-}"
-  local heartbeat_context="${4:-false}"
+  local engine_type="${4:-builtin}"
+  local heartbeat_context="${5:-false}"
 
   local prompt=""
 
@@ -414,7 +415,11 @@ ${identity_section}"
 
   # [3] Tool availability summary
   local tool_desc
-  tool_desc="$(tools_describe_all)"
+  if [[ "$engine_type" == "claude" ]]; then
+    tool_desc="$(tools_describe_bridge_only)"
+  else
+    tool_desc="$(tools_describe_all)"
+  fi
   if [[ -n "$tool_desc" ]]; then
     prompt="${prompt}
 

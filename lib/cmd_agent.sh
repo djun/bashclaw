@@ -33,7 +33,7 @@ cmd_agent() {
   fi
 
   local response
-  response="$(agent_run "$agent_id" "$message" "$channel" "$sender")"
+  response="$(engine_run "$agent_id" "$message" "$channel" "$sender")"
   if [[ -n "$response" ]]; then
     printf '%s\n' "$response"
   fi
@@ -126,7 +126,7 @@ cmd_agent_interactive() {
     esac
 
     local response
-    response="$(agent_run "$agent_id" "$input" "$channel" "$sender")"
+    response="$(engine_run "$agent_id" "$input" "$channel" "$sender")"
     if [[ -n "$response" ]]; then
       printf 'Assistant: %s\n\n' "$response"
     else

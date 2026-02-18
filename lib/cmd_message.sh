@@ -45,7 +45,7 @@ _cmd_message_send() {
   # If an agent is specified, run the agent first and send its response
   if [[ -n "$agent_id" ]]; then
     local response
-    response="$(agent_run "$agent_id" "$text" "$channel" "cli")"
+    response="$(engine_run "$agent_id" "$text" "$channel" "cli")"
     if [[ -n "$response" ]]; then
       text="$response"
     else

@@ -318,6 +318,43 @@ Available tools:
 TOOLDESC
 }
 
+# Bridge-only tool descriptions for Claude CLI engine.
+# Only includes BashClaw-specific tools that are exposed via MCP, not native-mapped ones.
+tools_describe_bridge_only() {
+  cat <<'TOOLDESC'
+BashClaw tools (invoke via Bash: bashclaw tool <name> --param value):
+
+1. memory - File-based key-value store for persistent memory.
+   Params: --action (get|set|delete|list|search) --key <string> --value <string> --query <string>
+
+2. cron - Manage scheduled jobs.
+   Params: --action (add|remove|list) --id <string> --schedule <string> --command <string>
+
+3. message - Send a message via the configured channel handler.
+   Params: --action send --channel <string> --target <string> --message <string>
+
+4. agents_list - List all configured agents with their settings.
+   Params: none
+
+5. session_status - Query session info for the current agent.
+   Params: --agent_id <string> --channel <string> --sender <string>
+
+6. sessions_list - List all active sessions across all agents.
+   Params: none
+
+7. agent_message - Send a message to another agent.
+   Params: --target_agent <string> --message <string> --from_agent <string>
+
+8. spawn - Spawn a background subagent for long-running tasks.
+   Params: --task <string> --label <string>
+
+9. spawn_status - Check status of a spawned background task.
+   Params: --task_id <string>
+
+You also have native file, shell, and web tools available directly (Read, Write, Bash, Glob, Grep, WebFetch, WebSearch).
+TOOLDESC
+}
+
 # ---- Tool Spec Builder (Anthropic format) ----
 
 tools_build_spec() {

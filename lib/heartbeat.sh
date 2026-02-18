@@ -148,7 +148,7 @@ heartbeat_run() {
 
   # Run agent turn
   local result
-  result="$(agent_run "$agent_id" "$prompt" "heartbeat" "system" 2>&1)" || true
+  result="$(engine_run "$agent_id" "$prompt" "heartbeat" "system" 2>&1)" || true
 
   # Process result
   local outcome

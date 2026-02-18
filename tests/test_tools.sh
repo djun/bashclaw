@@ -408,37 +408,37 @@ tools="$(printf '%s' "$result" | jq -r '.tools')"
 assert_eq "$tools" "true"
 teardown_test_env
 
-# ---- provider_resolve_from_catalog finds correct provider ----
+# ---- agent_resolve_provider catalog lookup ----
 
-test_start "provider_resolve_from_catalog finds anthropic for claude model"
+test_start "agent_resolve_provider finds anthropic for claude model via catalog"
 setup_test_env
 _MODELS_CATALOG_CACHE=""
 _MODELS_CATALOG_PATH=""
-result="$(provider_resolve_from_catalog "claude-opus-4-6")"
+result="$(agent_resolve_provider "claude-opus-4-6")"
 assert_eq "$result" "anthropic"
 teardown_test_env
 
-test_start "provider_resolve_from_catalog finds openai for gpt model"
+test_start "agent_resolve_provider finds openai for gpt model via catalog"
 setup_test_env
 _MODELS_CATALOG_CACHE=""
 _MODELS_CATALOG_PATH=""
-result="$(provider_resolve_from_catalog "gpt-4o")"
+result="$(agent_resolve_provider "gpt-4o")"
 assert_eq "$result" "openai"
 teardown_test_env
 
-test_start "provider_resolve_from_catalog finds google for gemini model"
+test_start "agent_resolve_provider finds google for gemini model via catalog"
 setup_test_env
 _MODELS_CATALOG_CACHE=""
 _MODELS_CATALOG_PATH=""
-result="$(provider_resolve_from_catalog "gemini-2.0-flash")"
+result="$(agent_resolve_provider "gemini-2.0-flash")"
 assert_eq "$result" "google"
 teardown_test_env
 
-test_start "provider_resolve_from_catalog falls back to pattern match"
+test_start "agent_resolve_provider defaults to anthropic for unknown model"
 setup_test_env
 _MODELS_CATALOG_CACHE=""
 _MODELS_CATALOG_PATH=""
-result="$(provider_resolve_from_catalog "claude-3-5-sonnet-20240620")"
+result="$(agent_resolve_provider "unknown-model-xyz")"
 assert_eq "$result" "anthropic"
 teardown_test_env
 

@@ -205,7 +205,7 @@ _cmd_cron_run() {
   printf 'Command: %s\n\n' "$command"
 
   local result
-  result="$(agent_run "$agent_id" "$command" "cron" "cron:${job_id}")"
+  result="$(engine_run "$agent_id" "$command" "cron" "cron:${job_id}")"
 
   # Log to history
   local history_dir="${BASHCLAW_STATE_DIR:?}/cron/history"

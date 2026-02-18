@@ -153,23 +153,6 @@ agent_resolve_provider() {
     return
   fi
 
-  case "$model" in
-    claude-*)                    printf 'anthropic'; return ;;
-    gpt-*|o1*|o3*|o4*)          printf 'openai'; return ;;
-    gemini-*)                    printf 'google'; return ;;
-    deepseek-*)                  printf 'deepseek'; return ;;
-    qwen-*|qwq-*)               printf 'qwen'; return ;;
-    glm-*)                       printf 'zhipu'; return ;;
-    moonshot-*|kimi-*)           printf 'moonshot'; return ;;
-    MiniMax-*|minimax-*|abab*)   printf 'minimax'; return ;;
-    mimo-*)                      printf 'xiaomi'; return ;;
-    ernie-*)                     printf 'qianfan'; return ;;
-    nvidia/*)                    printf 'nvidia'; return ;;
-    llama-*|meta/*)              printf 'groq'; return ;;
-    grok-*)                      printf 'xai'; return ;;
-    mistral-*)                   printf 'mistral'; return ;;
-  esac
-
   if [[ -n "${OPENROUTER_API_KEY:-}" ]]; then
     printf 'openrouter'
     return
@@ -236,7 +219,6 @@ agent_resolve_api_key() {
   if [[ -z "$key" ]]; then
     case "$provider" in
       google)  key="${GOOGLE_API_KEY:-}" ;;
-      zhipu)   key="${ZHIPU_API_KEY:-}" ;;
     esac
   fi
 
@@ -252,7 +234,9 @@ agent_resolve_api_key() {
   printf '%s' "$key"
 }
 
-# Data-driven API base URL resolution from models.json
+# Data-driven API base URL resolution from models.json.
+# base_url includes the version path (e.g. /v1, /v4, /v1beta).
+# When an env override is used, auto-append /v1 if no version path is present.
 _provider_api_url() {
   local provider="$1"
 
@@ -278,6 +262,17 @@ _provider_api_url() {
     local url_override
     eval "url_override=\"\${${env_key}:-}\""
     if [[ -n "$url_override" ]]; then
+      url_override="${url_override%/}"
+      # Auto-append version path if not present
+      if ! [[ "$url_override" =~ /v[0-9]+[a-z]*$ ]]; then
+        local api_format
+        api_format="$(printf '%s' "$catalog" | jq -r --arg p "$provider" \
+          '.providers[$p].api // "openai"' 2>/dev/null)"
+        case "$api_format" in
+          google) url_override="${url_override}/v1beta" ;;
+          *)      url_override="${url_override}/v1" ;;
+        esac
+      fi
       printf '%s' "$url_override"
       return
     fi
@@ -395,40 +390,7 @@ provider_registry_list() {
   fi
 }
 
-# Auto-detect the provider from a model name pattern.
-# Returns the provider name or empty string if unknown.
-provider_detect_from_model() {
-  local model_string="${1:?model_string required}"
-
-  # First try the catalog lookup
-  local provider
-  provider="$(_model_provider "$model_string")"
-  if [[ -n "$provider" ]]; then
-    printf '%s' "$provider"
-    return
-  fi
-
-  # Fall back to pattern matching
-  case "$model_string" in
-    claude-*)                    printf 'anthropic' ;;
-    gpt-*|o1*|o3*|o4*)          printf 'openai' ;;
-    gemini-*)                    printf 'google' ;;
-    deepseek-*)                  printf 'deepseek' ;;
-    qwen-*|qwq-*)               printf 'qwen' ;;
-    glm-*)                       printf 'zhipu' ;;
-    moonshot-*|kimi-*)           printf 'moonshot' ;;
-    MiniMax-*|minimax-*|abab*)   printf 'minimax' ;;
-    mimo-*)                      printf 'xiaomi' ;;
-    ernie-*)                     printf 'qianfan' ;;
-    nvidia/*)                    printf 'nvidia' ;;
-    llama-*|meta/*)              printf 'groq' ;;
-    grok-*)                      printf 'xai' ;;
-    mistral-*)                   printf 'mistral' ;;
-    *)                           printf '' ;;
-  esac
-}
-
-# Verify API connectivity for a provider (lightweight check).
+# ---- Model Capabilities ----
 # Returns 0 if healthy, 1 if not.
 provider_health_check() {
   local provider_name="${1:?provider_name required}"
@@ -460,16 +422,16 @@ provider_health_check() {
       http_code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 \
         -H "x-api-key: $api_key" \
         -H "anthropic-version: ${api_version:-2023-06-01}" \
-        "${base_url}/v1/messages" 2>/dev/null)" || http_code="000"
+        "${base_url}/messages" 2>/dev/null)" || http_code="000"
       ;;
     google)
       http_code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 \
-        "${base_url}/v1beta/models?key=${api_key}" 2>/dev/null)" || http_code="000"
+        "${base_url}/models?key=${api_key}" 2>/dev/null)" || http_code="000"
       ;;
     *)
       http_code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 \
         -H "Authorization: Bearer $api_key" \
-        "${base_url}/v1/models" 2>/dev/null)" || http_code="000"
+        "${base_url}/models" 2>/dev/null)" || http_code="000"
       ;;
   esac
 
@@ -569,37 +531,3 @@ model_get_capabilities() {
   fi
 }
 
-# Resolve provider from the catalog data instead of case-statement pattern matching.
-# Falls back to pattern matching only if not found in catalog.
-provider_resolve_from_catalog() {
-  local model_id="${1:?model_id required}"
-
-  require_command jq "provider_resolve_from_catalog requires jq"
-
-  # Catalog lookup first
-  local provider
-  provider="$(_model_provider "$model_id")"
-  if [[ -n "$provider" ]]; then
-    printf '%s' "$provider"
-    return 0
-  fi
-
-  # Pattern matching fallback
-  case "$model_id" in
-    claude-*)                    printf 'anthropic' ;;
-    gpt-*|o1*|o3*|o4*)          printf 'openai' ;;
-    gemini-*)                    printf 'google' ;;
-    deepseek-*)                  printf 'deepseek' ;;
-    qwen-*|qwq-*)               printf 'qwen' ;;
-    glm-*)                       printf 'zhipu' ;;
-    moonshot-*|kimi-*)           printf 'moonshot' ;;
-    MiniMax-*|minimax-*|abab*)   printf 'minimax' ;;
-    mimo-*)                      printf 'xiaomi' ;;
-    ernie-*)                     printf 'qianfan' ;;
-    nvidia/*)                    printf 'nvidia' ;;
-    llama-*|meta/*)              printf 'groq' ;;
-    grok-*)                      printf 'xai' ;;
-    mistral-*)                   printf 'mistral' ;;
-    *)                           printf '' ; return 1 ;;
-  esac
-}

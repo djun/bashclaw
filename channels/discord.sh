@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Discord Bot API channel for bashclaw
+# Discord Bot API channel for BashClaw
 
 DISCORD_API="https://discord.com/api/v10"
 DISCORD_MAX_MESSAGE_LENGTH=2000
@@ -162,7 +162,7 @@ _DISCORD_LAST_MSG_DIR=""
 
 _discord_last_msg_init() {
   if [[ -z "$_DISCORD_LAST_MSG_DIR" ]]; then
-    _DISCORD_LAST_MSG_DIR="$(mktemp -d -t bashclaw_discord.XXXXXX 2>/dev/null || mktemp -d /tmp/bashclaw_discord.XXXXXX)"
+    _DISCORD_LAST_MSG_DIR="$(tmpdir "bashclaw_discord")"
   fi
 }
 

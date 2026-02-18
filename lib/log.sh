@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Logging module for bashclaw
+# Logging module for BashClaw
 # Compatible with bash 3.2+ (no associative arrays)
 
 LOG_LEVEL="${LOG_LEVEL:-info}"

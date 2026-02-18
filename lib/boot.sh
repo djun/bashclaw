@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Boot automation module for bashclaw
+# Boot automation module for BashClaw
 # Parses BOOT.md files and executes startup instructions
 
 # ---- Agent Workspace Boot Discovery ----

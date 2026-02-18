@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Plugin system for bashclaw
+# Plugin system for BashClaw
 # Discovers, loads, and registers extension plugins from multiple sources.
 # Compatible with bash 3.2+ (no associative arrays, no global declares, no mapfile)
 

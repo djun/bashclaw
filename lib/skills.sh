@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Skills system for bashclaw
+# Skills system for BashClaw
 # Skills are prompt-level capabilities: directories containing SKILL.md and skill.json.
 # Compatible with bash 3.2+ (no associative arrays, no global declares, no mapfile)
 # Supports frontmatter-based requirements checking (requires_bins, requires_env).

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Long-term memory module for bashclaw
+# Long-term memory module for BashClaw
 # File-based key-value store with tags, sources, and access tracking
 # Includes workspace memory, daily logs, BM25-style search
 

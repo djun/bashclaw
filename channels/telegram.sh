@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Telegram Bot API channel for bashclaw
+# Telegram Bot API channel for BashClaw
 
 TELEGRAM_API="https://api.telegram.org/bot"
 TELEGRAM_MAX_MESSAGE_LENGTH=4096

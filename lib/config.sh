@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Configuration management for bashclaw (jq-based)
+# Configuration management for BashClaw (jq-based)
 # Manages heartbeat, dmScope, tools policy, channel policies
 
 _CONFIG_CACHE=""

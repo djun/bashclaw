@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Tool system for bashclaw
+# Tool system for BashClaw
 # Compatible with bash 3.2+ (no associative arrays)
 # Supports file tools, session isolation, optional tools, and elevated checks.
 
@@ -820,7 +820,7 @@ tool_shell() {
   else
     # Pure-bash timeout fallback (macOS/Termux)
     local _tmpout
-    _tmpout="$(mktemp -t bashclaw_sh.XXXXXX 2>/dev/null || mktemp /tmp/bashclaw_sh.XXXXXX)"
+    _tmpout="$(tmpfile "bashclaw_sh")"
     bash -c "$cmd" > "$_tmpout" 2>&1 &
     local _pid=$!
     local _waited=0

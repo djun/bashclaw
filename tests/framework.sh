@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Minimal test framework for bashclaw
+# Minimal test framework for BashClaw
 
 TESTS_PASSED=0
 TESTS_FAILED=0

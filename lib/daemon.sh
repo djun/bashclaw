@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Cross-platform daemon management for bashclaw
+# Cross-platform daemon management for BashClaw
 # Compatible with bash 3.2+
 
 _DAEMON_LABEL="com.bashclaw.gateway"

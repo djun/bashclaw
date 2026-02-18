@@ -40,7 +40,7 @@ _require_state_dir() {
 
 usage() {
   cat <<EOF
-bashclaw v${BASHCLAW_VERSION} - Bash-native AI agent framework
+BashClaw v${BASHCLAW_VERSION} - Bash-native AI agent framework
 
 Usage: bashclaw <command> [options]
 
@@ -80,7 +80,7 @@ EOF
 }
 
 cmd_version() {
-  printf 'bashclaw %s\n' "$BASHCLAW_VERSION"
+  printf 'BashClaw %s\n' "$BASHCLAW_VERSION"
 }
 
 _version_compare() {
@@ -295,7 +295,7 @@ COMP
 }
 
 cmd_status() {
-  printf '=== bashclaw status ===\n'
+  printf '=== BashClaw status ===\n'
   printf 'Version:    %s\n' "$BASHCLAW_VERSION"
   printf 'State dir:  %s\n' "$BASHCLAW_STATE_DIR"
   local cfg_file
@@ -324,7 +324,7 @@ cmd_status() {
 
 cmd_doctor() {
   local issues=0
-  printf '=== bashclaw doctor ===\n\n'
+  printf '=== BashClaw doctor ===\n\n'
 
   # Check required commands
   local curl_available=false

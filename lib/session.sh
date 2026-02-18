@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# JSONL session management for bashclaw
+# JSONL session management for BashClaw
 
 session_dir() {
   local base="${BASHCLAW_STATE_DIR:?BASHCLAW_STATE_DIR not set}/sessions"

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Process/command queue module for bashclaw
+# Process/command queue module for BashClaw
 # Dual-layer queue with typed lanes and queue modes.
 # Compatible with bash 3.2+ (no associative arrays, no global declares, no mapfile)
 
@@ -19,7 +19,7 @@ _queue_dir() {
   printf '%s' "$_QUEUE_DIR"
 }
 
-# ---- Original FIFO Queue (preserved for backward compat) ----
+# ---- FIFO Queue ----
 
 # Enqueue a command for an agent
 process_enqueue() {

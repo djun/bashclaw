@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Config management command for bashclaw
+# Config management command for BashClaw
 
 cmd_config() {
   local subcommand="${1:-}"

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Idempotency / deduplication cache for bashclaw
+# Idempotency / deduplication cache for BashClaw
 # File-based cache stored in ${BASHCLAW_STATE_DIR}/dedup/
 # Compatible with bash 3.2+ (no associative arrays, no global declares, no mapfile)
 

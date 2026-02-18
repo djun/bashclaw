@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Cron job management command for bashclaw
+# Cron job management command for BashClaw
 
 cmd_cron() {
   local subcommand="${1:-}"

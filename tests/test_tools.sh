@@ -454,4 +454,102 @@ count="$(printf '%s' "$result" | jq -r '.count')"
 assert_ge "$count" 1
 teardown_test_env
 
+# ---- tool_read_file reads an existing file ----
+
+test_start "tool_read_file reads existing file and returns JSON with content"
+setup_test_env
+test_file="${_TEST_TMPDIR}/readable_test.txt"
+printf 'line1\nline2\nline3\n' > "$test_file"
+result="$(tool_read_file "$(printf '{"path":"%s"}' "$test_file")")"
+assert_json_valid "$result"
+content="$(printf '%s' "$result" | jq -r '.content')"
+assert_contains "$content" "line1"
+assert_contains "$content" "line2"
+path_out="$(printf '%s' "$result" | jq -r '.path')"
+assert_eq "$path_out" "$test_file"
+teardown_test_env
+
+# ---- tool_read_file handles missing file ----
+
+test_start "tool_read_file handles missing file gracefully"
+setup_test_env
+result="$(tool_read_file '{"path":"/nonexistent/file_xyz.txt"}' 2>/dev/null)" || true
+assert_json_valid "$result"
+err="$(printf '%s' "$result" | jq -r '.error')"
+assert_contains "$err" "not found"
+teardown_test_env
+
+# ---- tool_write_file creates a file ----
+
+test_start "tool_write_file creates a file and returns success JSON"
+setup_test_env
+out_file="${_TEST_TMPDIR}/write_test_out.txt"
+result="$(tool_write_file "$(jq -nc --arg p "$out_file" --arg c "hello write" '{path:$p,content:$c}')")"
+assert_json_valid "$result"
+written="$(printf '%s' "$result" | jq -r '.written')"
+assert_eq "$written" "true"
+assert_file_exists "$out_file"
+file_content="$(cat "$out_file")"
+assert_eq "$file_content" "hello write"
+teardown_test_env
+
+# ---- tool_write_file blocks path traversal ----
+
+test_start "tool_write_file blocks path traversal with ../"
+setup_test_env
+result="$(tool_write_file '{"path":"/tmp/foo/../../../etc/passwd","content":"bad"}' 2>/dev/null)" || true
+assert_contains "$result" "traversal"
+teardown_test_env
+
+# ---- tool_list_files lists files in a directory ----
+
+test_start "tool_list_files lists files in a directory"
+setup_test_env
+mkdir -p "${_TEST_TMPDIR}/listdir"
+printf 'a' > "${_TEST_TMPDIR}/listdir/file_a.txt"
+printf 'b' > "${_TEST_TMPDIR}/listdir/file_b.txt"
+result="$(tool_list_files "$(jq -nc --arg p "${_TEST_TMPDIR}/listdir" '{path:$p}')")"
+assert_json_valid "$result"
+count="$(printf '%s' "$result" | jq -r '.count')"
+assert_ge "$count" 2
+names="$(printf '%s' "$result" | jq -r '.entries[].name')"
+assert_contains "$names" "file_a.txt"
+assert_contains "$names" "file_b.txt"
+teardown_test_env
+
+# ---- tool_file_search searches file contents ----
+
+test_start "tool_file_search finds files by content"
+setup_test_env
+mkdir -p "${_TEST_TMPDIR}/searchdir"
+printf 'alpha beta gamma\n' > "${_TEST_TMPDIR}/searchdir/doc1.txt"
+printf 'delta epsilon\n' > "${_TEST_TMPDIR}/searchdir/doc2.txt"
+result="$(tool_file_search "$(jq -nc --arg p "${_TEST_TMPDIR}/searchdir" '{path:$p,content:"gamma"}')")"
+assert_json_valid "$result"
+count="$(printf '%s' "$result" | jq -r '.count')"
+assert_eq "$count" "1"
+found_path="$(printf '%s' "$result" | jq -r '.results[0].path')"
+assert_contains "$found_path" "doc1.txt"
+teardown_test_env
+
+# ---- tools_resolve_profile returns correct tools ----
+
+test_start "tools_resolve_profile returns correct tools for coding profile"
+setup_test_env
+result="$(tools_resolve_profile "coding")"
+assert_contains "$result" "shell"
+assert_contains "$result" "read_file"
+assert_contains "$result" "write_file"
+assert_contains "$result" "memory"
+teardown_test_env
+
+test_start "tools_resolve_profile returns correct tools for minimal profile"
+setup_test_env
+result="$(tools_resolve_profile "minimal")"
+assert_contains "$result" "web_fetch"
+assert_contains "$result" "memory"
+assert_not_contains "$result" "shell"
+assert_not_contains "$result" "write_file"
+teardown_test_env
+
 report_results

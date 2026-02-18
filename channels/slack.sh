@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Slack Bot API channel for bashclaw
+# Slack Bot API channel for BashClaw
 
 SLACK_API="https://slack.com/api"
 SLACK_MAX_MESSAGE_LENGTH=40000
@@ -154,7 +154,7 @@ _SLACK_LAST_TS_DIR=""
 
 _slack_last_ts_init() {
   if [[ -z "$_SLACK_LAST_TS_DIR" ]]; then
-    _SLACK_LAST_TS_DIR="$(mktemp -d -t bashclaw_slack.XXXXXX 2>/dev/null || mktemp -d /tmp/bashclaw_slack.XXXXXX)"
+    _SLACK_LAST_TS_DIR="$(tmpdir "bashclaw_slack")"
   fi
 }
 

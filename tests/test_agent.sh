@@ -229,4 +229,47 @@ assert_contains "$names" "memory"
 assert_contains "$names" "shell"
 teardown_test_env
 
+# ---- agent_track_usage writes to usage.jsonl ----
+
+test_start "agent_track_usage writes to usage.jsonl"
+setup_test_env
+ensure_dir "${BASHCLAW_STATE_DIR}/usage"
+agent_track_usage "main" "claude-opus-4-6" 1000 500
+usage_file="${BASHCLAW_STATE_DIR}/usage/usage.jsonl"
+assert_file_exists "$usage_file"
+line="$(tail -n 1 "$usage_file")"
+assert_json_valid "$line"
+aid="$(printf '%s' "$line" | jq -r '.agent_id')"
+assert_eq "$aid" "main"
+model="$(printf '%s' "$line" | jq -r '.model')"
+assert_eq "$model" "claude-opus-4-6"
+it="$(printf '%s' "$line" | jq '.input_tokens')"
+assert_eq "$it" "1000"
+ot="$(printf '%s' "$line" | jq '.output_tokens')"
+assert_eq "$ot" "500"
+teardown_test_env
+
+# ---- agent_estimate_tokens returns number > 0 ----
+
+test_start "agent_estimate_tokens returns number > 0 for non-empty session"
+setup_test_env
+cat > "$BASHCLAW_CONFIG" <<'EOF'
+{"session": {"scope": "global"}}
+EOF
+_CONFIG_CACHE=""
+config_load
+f="$(session_file "main" "test")"
+session_append "$f" "user" "hello world this is a test"
+session_append "$f" "assistant" "sure here is my response to your query"
+tokens="$(agent_estimate_tokens "$f")"
+assert_match "$tokens" '^[0-9]+$'
+assert_gt "$tokens" 0
+teardown_test_env
+
+test_start "agent_estimate_tokens returns 0 for missing file"
+setup_test_env
+tokens="$(agent_estimate_tokens "/nonexistent/session.jsonl")"
+assert_eq "$tokens" "0"
+teardown_test_env
+
 report_results

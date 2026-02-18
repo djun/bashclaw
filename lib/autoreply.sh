@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Auto-reply rules module for bashclaw
+# Auto-reply rules module for BashClaw
 # Pattern-based automatic responses with channel filtering
 
 _AUTOREPLY_DIR=""

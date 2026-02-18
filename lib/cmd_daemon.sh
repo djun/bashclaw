@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Daemon management command for bashclaw
+# Daemon management command for BashClaw
 
 cmd_daemon() {
   local subcommand="${1:-}"

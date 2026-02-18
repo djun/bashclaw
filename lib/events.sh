@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# System events queue for bashclaw
+# System events queue for BashClaw
 # Background processes enqueue events; agent drains them on next turn.
 # File-based FIFO queue with dedup and max capacity.
 # Compatible with bash 3.2+ (no associative arrays, no global declares, no mapfile)

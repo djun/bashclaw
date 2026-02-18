@@ -85,7 +85,7 @@ agent_build_tools_spec() {
     deny_list="[]"
   fi
 
-  # Legacy: check for flat tools array (backward compat)
+  # Flat tools array format
   local enabled_tools
   enabled_tools="$(config_agent_get "$agent_id" "tools" "")"
   if [[ -n "$enabled_tools" && "$enabled_tools" != "null" ]]; then

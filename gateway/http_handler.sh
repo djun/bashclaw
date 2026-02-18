@@ -203,7 +203,7 @@ _http_check_auth() {
   local auth_token
   auth_token="$(config_get '.gateway.auth.token' '')"
 
-  # No token configured = no auth required (backward compat)
+  # No token configured = no auth required
   if [[ -z "$auth_token" ]]; then
     return 0
   fi
@@ -289,7 +289,7 @@ handle_request() {
   esac
 
   case "$HTTP_METHOD:$HTTP_PATH" in
-    # Legacy routes (backward compatible)
+    # Shorthand routes
     GET:/status|GET:/health|GET:/healthz)
       _handle_status
       ;;

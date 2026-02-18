@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Utility functions for bashclaw
+# Utility functions for BashClaw
 
 _TMPFILES=()
 
@@ -147,10 +147,22 @@ tmpfile() {
   printf '%s' "$f"
 }
 
+tmpdir() {
+  local prefix="${1:-bashclaw}"
+  local d
+  d="$(mktemp -d -t "${prefix}.XXXXXX" 2>/dev/null || mktemp -d "/tmp/${prefix}.XXXXXX")"
+  _TMPFILES+=("$d")
+  printf '%s' "$d"
+}
+
 cleanup_tmpfiles() {
   local f
   for f in "${_TMPFILES[@]}"; do
-    [[ -f "$f" ]] && rm -f "$f"
+    if [[ -d "$f" ]]; then
+      rm -rf "$f"
+    elif [[ -f "$f" ]]; then
+      rm -f "$f"
+    fi
   done
   _TMPFILES=()
 }

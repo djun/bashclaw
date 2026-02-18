@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Hooks management command for bashclaw
+# Hooks management command for BashClaw
 
 cmd_hooks() {
   local subcommand="${1:-}"

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Security module for bashclaw
+# Security module for BashClaw
 # Audit logging, pairing codes, rate limiting, exec approval,
 # tool policy, elevated policy, command auth
 
@@ -175,7 +175,7 @@ security_rate_limit() {
   local count=0
   if [[ -f "$file" ]]; then
     local tmp
-    tmp="$(mktemp -t bashclaw_rl.XXXXXX 2>/dev/null || mktemp /tmp/bashclaw_rl.XXXXXX)"
+    tmp="$(tmpfile "bashclaw_rl")"
     while IFS= read -r ts; do
       if (( ts > window_start )); then
         printf '%s\n' "$ts" >> "$tmp"

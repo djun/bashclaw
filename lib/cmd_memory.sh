@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Memory management command for bashclaw
+# Memory management command for BashClaw
 
 cmd_memory() {
   local subcommand="${1:-}"
@@ -153,7 +153,7 @@ _cmd_memory_set() {
 
   if [[ -n "$tags" ]]; then
     local tags_json
-    tags_json="$(printf '%s' "$tags" | tr ',' '\n' | jq -R '.' | jq -s '.')"
+    tags_json="$(printf '%s' "$tags" | jq -Rs 'split(",") | map(select(length > 0))')"
     jq -nc --arg k "$key" --arg v "$value" --arg t "$ts" --argjson tags "$tags_json" \
       '{"key": $k, "value": $v, "tags": $tags, "updated_at": $t}' > "$file"
   else

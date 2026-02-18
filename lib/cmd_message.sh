@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Message send command for bashclaw
+# Message send command for BashClaw
 
 cmd_message() {
   local subcommand="${1:-}"

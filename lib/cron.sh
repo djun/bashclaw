@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Advanced cron system for bashclaw
+# Advanced cron system for BashClaw
 # Supports three schedule types (at/every/cron), exponential backoff,
 # stuck job detection, isolated sessions, and concurrent run limits.
 # Compatible with bash 3.2+ (no associative arrays, no global declares, no mapfile)
@@ -69,7 +69,7 @@ cron_store_save() {
 
 # Parse a schedule JSON object and return its kind.
 # Supports: {kind:"at", at:"ISO-timestamp"}, {kind:"every", everyMs:N}, {kind:"cron", expr:"...", tz:"UTC"}
-# Also accepts plain cron expression strings for backward compatibility.
+# Also accepts plain cron expression strings.
 cron_parse_schedule() {
   local schedule_input="$1"
 
@@ -84,7 +84,7 @@ cron_parse_schedule() {
     return 0
   fi
 
-  # Backward compat: treat as a cron expression string
+  # Fallback: treat as a cron expression string
   printf 'cron'
 }
 
@@ -133,7 +133,7 @@ cron_next_run() {
       expr="$(printf '%s' "$schedule_input" | jq -r '.expr // empty' 2>/dev/null)"
       tz="$(printf '%s' "$schedule_input" | jq -r '.tz // empty' 2>/dev/null)"
 
-      # If input is a plain string (backward compat), use it directly
+      # If input is a plain string, use it directly
       if [[ -z "$expr" ]]; then
         expr="$schedule_input"
       fi

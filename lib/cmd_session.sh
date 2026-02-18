@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Session management command for bashclaw
+# Session management command for BashClaw
 
 cmd_session() {
   local subcommand="${1:-}"

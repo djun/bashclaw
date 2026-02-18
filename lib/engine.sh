@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Engine abstraction layer for bashclaw
+# Engine abstraction layer for BashClaw
 # Routes agent execution to builtin runtime, Claude Code CLI, or other agent CLIs
 
 # Detect available CLI engines on the system

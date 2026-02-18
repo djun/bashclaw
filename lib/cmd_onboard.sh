@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Onboarding setup wizard for bashclaw
+# Onboarding setup wizard for BashClaw
 
 cmd_onboard() {
   printf 'Bashclaw Setup Wizard\n'
@@ -309,7 +309,7 @@ onboard_channel() {
       read -r channel_ids
       if [[ -n "$channel_ids" ]]; then
         local json_array
-        json_array="$(printf '%s' "$channel_ids" | tr ',' '\n' | jq -R '.' | jq -s '.')"
+        json_array="$(printf '%s' "$channel_ids" | jq -Rs 'split(",") | map(select(length > 0))')"
         config_set '.channels.discord' "$(jq -nc --argjson ids "$json_array" \
           '{enabled: true, monitorChannels: $ids}')"
       else
@@ -344,7 +344,7 @@ onboard_channel() {
           read -r channel_ids
           if [[ -n "$channel_ids" ]]; then
             local json_array
-            json_array="$(printf '%s' "$channel_ids" | tr ',' '\n' | jq -R '.' | jq -s '.')"
+            json_array="$(printf '%s' "$channel_ids" | jq -Rs 'split(",") | map(select(length > 0))')"
             config_set '.channels.slack' "$(jq -nc --argjson ids "$json_array" \
               '{enabled: true, monitorChannels: $ids}')"
           else

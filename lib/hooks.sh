@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Hook/middleware system for bashclaw
+# Hook/middleware system for BashClaw
 # Supports 14 event types, execution strategies, and priority ordering.
 # Compatible with bash 3.2+ (no associative arrays, no global declares, no mapfile)
 
@@ -18,12 +18,12 @@
 #   message_sending    - before a reply is dispatched
 #   message_sent       - after a reply is dispatched
 #   session_start      - when a new session is created
-#   session_end        - when session resets or idle timeout (OpenClaw compat)
-#   gateway_start      - when gateway starts (OpenClaw compat)
-#   gateway_stop       - when gateway stops (OpenClaw compat)
-#   tool_result_persist - after tool result is saved to session (OpenClaw compat)
+#   session_end        - when session resets or idle timeout
+#   gateway_start      - when gateway starts
+#   gateway_stop       - when gateway stops
+#   tool_result_persist - after tool result is saved to session
 #
-# Aliases (OpenClaw-style -> BashClaw-style):
+# Aliases:
 #   before_tool_call   -> pre_tool
 #   after_tool_call    -> post_tool
 
@@ -43,7 +43,7 @@ _hooks_dir() {
   printf '%s' "$_HOOKS_DIR"
 }
 
-# Resolve event name aliases (OpenClaw-style -> BashClaw-style).
+# Resolve event name aliases.
 # Returns the canonical event name.
 _hooks_resolve_alias() {
   case "$1" in

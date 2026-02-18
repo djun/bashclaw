@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Heartbeat system for bashclaw
+# Heartbeat system for BashClaw
 # Periodic autonomous agent check-ins with active-hours gating.
 # Compatible with bash 3.2+ (no associative arrays, no global declares, no mapfile)
 

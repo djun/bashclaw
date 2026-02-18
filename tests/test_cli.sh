@@ -15,14 +15,14 @@ CLI="${BASHCLAW_ROOT}/bashclaw"
 test_start "bashclaw --version outputs version"
 setup_test_env
 result="$(bash "$CLI" --version 2>&1)"
-assert_contains "$result" "bashclaw"
+assert_contains "$result" "BashClaw"
 assert_match "$result" '[0-9]+\.[0-9]+\.[0-9]+'
 teardown_test_env
 
 test_start "bashclaw version outputs version"
 setup_test_env
 result="$(bash "$CLI" version 2>&1)"
-assert_contains "$result" "bashclaw"
+assert_contains "$result" "BashClaw"
 teardown_test_env
 
 # ---- bashclaw --help ----
@@ -103,7 +103,7 @@ test_start "bashclaw doctor checks dependencies"
 setup_test_env
 bash "$CLI" config init >/dev/null 2>&1
 result="$(bash "$CLI" doctor 2>&1)" || true
-assert_contains "$result" "bashclaw doctor"
+assert_contains "$result" "BashClaw doctor"
 assert_contains "$result" "bash"
 assert_contains "$result" "jq"
 assert_contains "$result" "curl"
@@ -115,7 +115,7 @@ test_start "bashclaw status shows state"
 setup_test_env
 bash "$CLI" config init >/dev/null 2>&1
 result="$(bash "$CLI" status 2>&1)"
-assert_contains "$result" "bashclaw status"
+assert_contains "$result" "BashClaw status"
 assert_contains "$result" "Version:"
 assert_contains "$result" "State dir:"
 teardown_test_env

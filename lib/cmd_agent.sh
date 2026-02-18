@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Agent CLI command for bashclaw
+# Agent CLI command for BashClaw
 
 cmd_agent() {
   local message="" agent_id="main" channel="default" sender="" interactive=false verbose=false

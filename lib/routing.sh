@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Message routing for bashclaw
+# Message routing for BashClaw
 # Compatible with bash 3.2+ (no associative arrays)
 
 # ---- Channel-specific message length limits ----

@@ -663,4 +663,93 @@ second_count="$(wc -l < "$f" | tr -d ' ')"
 assert_eq "$first_count" "$second_count"
 teardown_test_env
 
+# ---- session_append_tool_call writes valid JSONL ----
+
+test_start "session_append_tool_call writes valid JSONL with tool_use role"
+setup_test_env
+cat > "$BASHCLAW_CONFIG" <<'EOF'
+{"session": {"scope": "global"}}
+EOF
+_CONFIG_CACHE=""
+config_load
+f="$(session_file "main" "test")"
+session_ensure_header "$f"
+session_append_tool_call "$f" "memory" '{"action":"get","key":"foo"}' "tool_123"
+line="$(tail -n 1 "$f")"
+assert_json_valid "$line"
+role="$(printf '%s' "$line" | jq -r '.role')"
+assert_eq "$role" "assistant"
+ttype="$(printf '%s' "$line" | jq -r '.type')"
+assert_eq "$ttype" "tool_call"
+tname="$(printf '%s' "$line" | jq -r '.tool_name')"
+assert_eq "$tname" "memory"
+tid="$(printf '%s' "$line" | jq -r '.tool_id')"
+assert_eq "$tid" "tool_123"
+ts="$(printf '%s' "$line" | jq -r '.ts')"
+assert_match "$ts" '^[0-9]+$'
+teardown_test_env
+
+# ---- session_append_tool_result writes valid JSONL ----
+
+test_start "session_append_tool_result writes valid JSONL with tool_result role"
+setup_test_env
+cat > "$BASHCLAW_CONFIG" <<'EOF'
+{"session": {"scope": "global"}}
+EOF
+_CONFIG_CACHE=""
+config_load
+f="$(session_file "main" "test")"
+session_ensure_header "$f"
+session_append_tool_result "$f" "tool_123" '{"key":"foo","found":true}' "false"
+line="$(tail -n 1 "$f")"
+assert_json_valid "$line"
+role="$(printf '%s' "$line" | jq -r '.role')"
+assert_eq "$role" "tool"
+ttype="$(printf '%s' "$line" | jq -r '.type')"
+assert_eq "$ttype" "tool_result"
+tid="$(printf '%s' "$line" | jq -r '.tool_id')"
+assert_eq "$tid" "tool_123"
+is_err="$(printf '%s' "$line" | jq -r '.is_error')"
+assert_eq "$is_err" "false"
+teardown_test_env
+
+# ---- session_meta_update and session_meta_get round-trip (numeric) ----
+
+test_start "session_meta_update and session_meta_get round-trip with numeric value"
+setup_test_env
+cat > "$BASHCLAW_CONFIG" <<'EOF'
+{"session": {"scope": "global"}}
+EOF
+_CONFIG_CACHE=""
+config_load
+f="$(session_file "main" "test")"
+session_append "$f" "user" "msg"
+session_meta_update "$f" "totalTokens" '42000'
+result="$(session_meta_get "$f" "totalTokens" "0")"
+assert_eq "$result" "42000"
+teardown_test_env
+
+# ---- session_estimate_tokens returns reasonable number ----
+
+test_start "session_estimate_tokens returns reasonable number"
+setup_test_env
+cat > "$BASHCLAW_CONFIG" <<'EOF'
+{"session": {"scope": "global"}}
+EOF
+_CONFIG_CACHE=""
+config_load
+f="$(session_file "main" "test")"
+session_append "$f" "user" "hello world this is a test message"
+session_append "$f" "assistant" "this is the reply from assistant"
+tokens="$(session_estimate_tokens "$f")"
+assert_match "$tokens" '^[0-9]+$'
+assert_gt "$tokens" 0
+teardown_test_env
+
+test_start "session_estimate_tokens returns 0 for missing file"
+setup_test_env
+tokens="$(session_estimate_tokens "/nonexistent/session.jsonl")"
+assert_eq "$tokens" "0"
+teardown_test_env
+
 report_results

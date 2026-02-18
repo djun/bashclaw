@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Claude Code CLI engine for bashclaw
+# Claude Code CLI engine for BashClaw
 # Delegates agent execution to Claude Code CLI (claude -p --output-format json).
 # BashClaw-specific tools are accessed via `bashclaw tool <name> --flag value` through
 # Claude CLI's native Bash tool. Hooks are bridged via `--settings` JSON.
@@ -37,7 +37,7 @@ engine_claude_session_id() {
   session_meta_get "$session_file" "cc_session_id" ""
 }
 
-# Resolve bashclaw binary path for tool invocation
+# Resolve BashClaw binary path for tool invocation
 _engine_claude_bashclaw_bin() {
   local script_dir
   script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -168,7 +168,7 @@ engine_claude_run() {
   sess_file="$(session_file "$agent_id" "$channel" "$sender")"
   session_meta_load "$sess_file" >/dev/null 2>&1
 
-  # Session idle reset (parity with builtin engine)
+  # Session idle reset
   session_check_idle_reset "$sess_file" || true
 
   # Append user message to BashClaw session for history tracking
@@ -354,7 +354,7 @@ ${message}"
     session_meta_update "$sess_file" "cc_num_turns" "$num_turns"
   fi
 
-  # Usage tracking (parity with builtin engine)
+  # Usage tracking
   local input_tokens output_tokens
   input_tokens="$(printf '%s' "$response" | jq -r '.usage.input_tokens // 0' 2>/dev/null)"
   output_tokens="$(printf '%s' "$response" | jq -r '.usage.output_tokens // 0' 2>/dev/null)"

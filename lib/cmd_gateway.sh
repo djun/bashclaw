@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Gateway server command for bashclaw
+# Gateway server command for BashClaw
 
 GATEWAY_PID_FILE=""
 GATEWAY_PORT=""
